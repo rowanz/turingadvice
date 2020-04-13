@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta
+       name="viewport"
+       content="width=device-width,initial-scale=1, shrink-to-fit=no">
+
+    <title>Life Advice from an AI</title>
+
+    <!-- bootstrap -->
+    <link
+       rel="stylesheet"
+       href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+       integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+       crossorigin="anonymous">
+  </head>
+  <body>
+    <!--'subreddit', 'title', 'selftext', 'advice'-->
+    <main class="col-lg-12" role="main">
+      <h1 class="display-4">Ask an AI for life advice</h1>
+      <h4>Fill in the 'title' and 'details' fields, then press 'generate' next to 'advice'</h4>
+      <h4>Suggestion: visit <a href="https://reddit.com/r/relationships">reddit.com/r/relationships</a> or <a href="https://reddit.com/r/advice">reddit.com/r/advice</a> for things to put in</h4>
+      <div class="alert alert-warning">
+        Model details: {{ model_details }}
+      </div>
+            <div class="mb-3">
+      <div class="input-group">
+        <div class="input-group-prepend"><span class="input-group-text">Subreddit</span></div>
+        <textarea class="form-control" name="subreddit" rows="1">Advice</textarea>
+        <div class="input-group-append">
+          <button class="btn btn-secondary" type="button" id="submitsubreddit">Generate</button>
+        </div></div>
+        <small id="subreddithelp" class="form-text text-muted">Feel free to leave this as is!</small>
+      </div>
+
+      <div class="mb-3">
+      <div class="input-group">
+        <div class="input-group-prepend"><span class="input-group-text">Title</span></div>
+        <textarea class="form-control" name="title" rows="1"></textarea>
+        <div class="input-group-append">
+          <button class="btn btn-secondary" type="button" id="submittitle">Generate</button>
+        </div></div>
+        <small id="titlehelp" class="form-text text-muted">Example: I (25F) discovered today that my bf (30M) cheated on me and I'm scheduled to go on a trip with his entire friend group in a few weeks.</small>
+      </div>
+
+
+      <div class="mb-3">
+      <div class="input-group">
+        <div class="input-group-prepend"><span class="input-group-text">Details</span></div>
+        <textarea class="form-control" name="selftext" rows="15"></textarea>
+        <div class="input-group-append">
+          <button class="btn btn-secondary" type="button" id="submitselftext">Generate</button>
+        </div></div>
+        <small id="selftexthelp" class="form-text text-muted">Example:
+          <p>After the ball dropped, I ubered back to my boyfriend's place and found out from his (30M) roommate (30M) that he told him we were open and has taken full advantage of that status over our last few months of dating in our 1.5-year relationship, at least one time in their own home with the roommate present and I'm assuming more outside of the house.</p>
+
+          <p>I travel a lot for work and we've had trust issues so this is unsurprising but extremely validating of the many hours I spent in the mentally draining cycle of suspicion/guilt. Ironically, I always told him that I'd be fine with an open relationship, as long as we communicated, but he didn't seem to like the idea. He likes to spin tall tales, is extremely insecure, and has been accused of cheating in past relationships. I told roomie (30M) that I would not list him as my source because they go way back and I appreciate him telling me.</p>
+          <p>The friend also was a little odd in his delivery and touched my knee while telling me and alluded to us being together in a very vague sense. Despite this creepy behavior, I trust him and what he told me because we've always looked out for each other when it came to my boyfriend. We're both self-hating empaths and tend to get caught up in situations like the one I'm describing.</p>
+
+<p>I'm scheduled to go on a 12-person vacation to New Orleans for 5 days, all 12 people being his friend group who we also celebrated NYE with. While I get along with everyone well, I only have one person's number (a non-organizer of the trip). BF purchased the tickets and I already venmoed him for mine and have yet to venmo more for the lodging.</p>
+
+<p>I need advice as to next steps, because last night when he returned home, I was shaking hard, drunk/high, and having a mental flood of relief/disappointment from the news to even move or speak.</p>
+
+<p>TL;DR: My boyfriend cheated on me, as verified by his roommate. I need advice on how to back out of the now awkward vacation with him without listing roommate as my source.</p></small>
+      </div>
+
+      <div class="mb-3">
+      <div class="input-group">
+        <div class="input-group-prepend"><span class="input-group-text">Advice</span></div>
+        <textarea class="form-control" name="advice" rows="10" readonly="True"></textarea>
+        <div class="input-group-append">
+          <button class="btn btn-primary" type="button" id="submitadvice">Generate</button>
+        </div>
+      </div>
+      <small id="advicehelp" class="form-text text-muted">Press generate!</small>
+      </div>
+
+      <div id="problems"> </div>
+    </main>
+
+<!-- Bootstrap JS and it's dependencies -->
+<script
+   src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+   integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+   crossorigin="anonymous">
+</script>
+<script
+   src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"
+   integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+   crossorigin="anonymous">
+</script>
+<script
+   src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"
+   integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+   crossorigin="anonymous">
+</script>
+
+<script>
+var fields = ['subreddit', 'title', 'selftext', 'advice'];
+var searchParams = new URLSearchParams(window.location.search);
+
+function get_formdata() {
+  var formdata = {};
+  for (var i=0; i < fields.length; i++) {
+    formdata[fields[i]] = $('textarea[name="' + fields[i] + '"]').val();
+    searchParams.set(fields[i], formdata[fields[i]]);
+  }
+
+  var newRelativePathQuery = window.location.pathname + '?' + searchParams.toString();
+  history.pushState(null, '', newRelativePathQuery);
+  return formdata;
+}
+
+function generate(formdata, target) {
+  if (fields.indexOf(target) === -1) {
+    alert("Looks like you tried generating " + target + " but that's not one of the valid fields. wtf");
+    return ''
+  }
+  formdata["target"] = target;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/ask', true);
+  xhr.setRequestHeader('Content-type', 'application/json');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+      var newtext = JSON.parse(xhr.responseText)['gen'];
+      $('textarea[name="' + target + '"]').val(newtext);
+      $('#problems').empty();
+    }
+  };
+  xhr.send(JSON.stringify(formdata));
+  var waiting_msg = $('<div class="alert alert-danger">');
+  waiting_msg.append('waiting for response. sorry, this could take up to a minute.');
+  $('#problems').append(waiting_msg);
+}
+
+$(document).ready(function () {
+    let fieldtouse = "advice";
+    $('#submit' + fieldtouse).on('click', function () {
+        generate(get_formdata(), fieldtouse);
+    });
+
+    if (searchParams.has(fieldtouse)) {
+        $('textarea[name="' + fieldtouse + '"]').val(searchParams.get(fieldtouse));
+    }
+});
+</script>
+
+  </body>
+</html>
