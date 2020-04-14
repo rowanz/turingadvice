@@ -4,7 +4,12 @@ Static dataset prep. Here, I have instructions and some scripts I used to create
 
 # RedditAdvice2019.
 
-TODO 
+You can download redditadvice2019 here:
+
+`gsutil cp gs://turingadvice/redditadvice2019.jsonl .`
+
+You can then use `to_tfrecord_grover.py` and `to_tfrecord_t5.py` to convert it into formats suitable for Grover and T5.
+
 
 
 
