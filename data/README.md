@@ -16,7 +16,7 @@ You can then use `to_tfrecord_grover.py` and `to_tfrecord_t5.py` to convert it i
 
 ## Get all comments and posts from multiple subreddits using bigquery
 
-The best way to download stuff from reddit is using BigQuery. See [https://pushshift.io/using-bigquery-with-reddit-data/](https://pushshift.io/using-bigquery-with-reddit-data/) for a walkthrough. Anyways, I used the following commands to create two tables in Google Cloud, one for posts and one for comments:
+The best way to download stuff from reddit is using BigQuery. See [https://pushshift.io/using-bigquery-with-reddit-data/](https://pushshift.io/using-bigquery-with-reddit-data/) for a walkthrough. Anyways, I used the following commands to create two tables in Google Cloud, one for posts,
 ```
 select created_utc,subreddit,author,num_comments,score,title,selftext,id,gilded,retrieved_on
 from (select * from `fh-bigquery.reddit_posts.full_corpus_201512` union all select * from `fh-bigquery.reddit_posts.201*`)
@@ -25,7 +25,7 @@ and score > 10
 and char_length(selftext) > 64
 and stickied = false;
 ```
-and write to `posts` in `rowan_reddit_advice`. Then do
+and one for comments:
 ```
 select created_utc,subreddit,author,parent_id,link_id,score,body,id,gilded,retrieved_on
 from `fh-bigquery.reddit_comments.20*`
@@ -33,4 +33,4 @@ where (subreddit = 'relationships' OR subreddit = 'Advice' OR subreddit = 'needa
 and score > 10
 and char_length(body) > 32;
 ```
-Write this to `comments`.
+You can then use [create_redditadvice_2019.py](create_redditadvice_2019.py) to turn these into a static dataset for training.

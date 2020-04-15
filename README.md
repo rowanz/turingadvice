@@ -68,7 +68,7 @@ Or, to create your own dataset, visit the [data/](data/) folder and use my BigQu
 Submitting to our leaderboard is easy! All you'll need to do is set up a **web API** for your model, and give me access to it. 
 
 ## Setting up the Web API
-Examples of the format required are in [grover/server/run_server.py](grover/server/run_server.py, [t5/run_server.py](t5/run_server.py), and [tfidf/run_server.py](tfidf/run_server.py). If you run one of those scripts, then there will be a web API running on `localhost:5000/api/askbatch`. Probably the easiest thing to do is to customize one of those scripts for your model.
+Examples of the format required are in [grover/server/run_server.py](grover/server/run_server.py), [t5/run_server.py](t5/run_server.py), and [tfidf/run_server.py](tfidf/run_server.py). If you run one of those scripts, then there will be a web API running on `localhost:5000/api/askbatch`. Probably the easiest thing to do is to customize one of those scripts for your model.
 
 During evaluation, I'll send your web API 200 situations, and it'll need to generate advice for each one. It'll be a json with a key called `instances`. Its value is a list of situations. Each has `title`, `selftext`, and `subreddit` fields:
 
