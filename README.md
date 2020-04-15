@@ -63,6 +63,40 @@ Or, to create your own dataset, visit the [data/](data/) folder and use my BigQu
 }
 ```
 
+# Submit to the leaderboard
+
+Submitting to our leaderboard is easy! All you'll need to do is set up a **web API** for your model, and give me access to it. 
+
+## Setting up the Web API
+Examples of the format required are in [grover/server/run_server.py](grover/server/run_server.py, [t5/run_server.py](t5/run_server.py), and [tfidf/run_server.py](tfidf/run_server.py). If you run one of those scripts, then there will be a web API running on `localhost:5000/api/askbatch`. Probably the easiest thing to do is to customize one of those scripts for your model.
+
+During evaluation, I'll send your web API 200 situations, and it'll need to generate advice for each one. It'll be a json with a key called `instances`. Its value is a list of situations. Each has `title`, `selftext`, and `subreddit` fields:
+
+```
+{"instances": [
+               {"title": "title1", "selftext": "selftext1", "subreddit": "subreddit1"},
+               {"title": "title2", "selftext": "selftext2", "subreddit": "subreddit2"},
+                ...]}
+```
+
+ You'll return a JSON with a single key, `gens`, containing an identically-sized list of pieces of advice.
+```
+{"gens": ["gen1", "gen2", ...]}
+```
+
+The format is exactly the same as what's in those files. You can debug it using a `curl` command:
+```
+curl -X POST -d '{"instances": [{"title": "I am trying to debug this code and its really hard.", "selftext": "test test", "subreddit": "Advice"},{"title": "I am trying to debug this code and its really hard.  airestn eairestn iarst iearnst ", "selftext": "test test", "subreddit": "Advice"}]}' -H "Content-Type: application/json" localhost:5000/api/askbatch
+```
+
+Let me know if you encounter trouble with making a web demo, and we'll figure out a solution!
+
+## Making the submission
+Please [email me](https://scr.im/rowan) with a public-facing URL to your web API, and I can get the evaluation started. Though in the paper, we suggest having leaderboard submitters pay the mechanical turk fee, we're happy to make an exception for for the first couple of teams while we iron out the details :)
+
+Also, please include in your email 1) a name for your model, 2) your team name (including your affiliation), and optionally, 3) a github repo or paper link. (I can also update these fields later).
+
+
 # Evaluation results from earlier evaluation runs
 
 I'm making the evaluation results public, so that researchers can explore them. Right now there's only one available, download it at
@@ -102,36 +136,3 @@ Each json object is a reddit post, containing:
             * `q3_justification`: If `slightlyhelpful`, whether they preferred the other advice due to a `meaning` or `writing` issue. Otherwise, whether the bad advice could never be helpful (`contradiction`) or could possibly be helpful (`neutral`).
             
 The worker IDs are hidden for privacy.
-
-# Submit to the leaderboard
-
-Submitting to our leaderboard is easy! All you'll need to do is set up a **web API** for your model, and give me access to it. 
-
-## Setting up the Web API
-Examples of the format required are in [grover/server/run_server.py], [t5/run_server.py], and [tfidf/run_server.py]. If you run one of those scripts, then there will be a web API running on `localhost:5000/api/askbatch`. Probably the easiest thing to do is to customize one of those scripts for your model.
-
-During evaluation, I'll send your web API 200 situations, and it'll need to generate advice for each one. It'll be a json with a key called `instances`. Its value is a list of situations. Each has `title`, `selftext`, and `subreddit` fields:
-
-```
-{"instances": [
-               {"title": "title1", "selftext": "selftext1", "subreddit": "subreddit1"},
-               {"title": "title2", "selftext": "selftext2", "subreddit": "subreddit2"},
-                ...]}
-```
-
- You'll return a JSON with a single key, `gens`, containing an identically-sized list of pieces of advice.
-```
-{"gens": ["gen1", "gen2", ...]}
-```
-
-The format is exactly the same as what's in those files. You can debug it using a `curl` command:
-```
-curl -X POST -d '{"instances": [{"title": "I am trying to debug this code and its really hard.", "selftext": "test test", "subreddit": "Advice"},{"title": "I am trying to debug this code and its really hard.  airestn eairestn iarst iearnst ", "selftext": "test test", "subreddit": "Advice"}]}' -H "Content-Type: application/json" localhost:5000/api/askbatch
-```
-
-Let me know if you encounter trouble with making a web demo, and we'll figure out a solution!
-
-## Making the submission
-Please [email me](https://scr.im/rowan) with a public-facing URL to your web API, and I can get the evaluation started. Though in the paper, we suggest having leaderboard submitters pay the mechanical turk fee, we're happy to make an exception for for the first couple of teams while we iron out the details :)
-
-Also, please include in your email 1) a name for your model, 2) your team name (including your affiliation), and optionally, 3) a github repo or paper link. (I can also update these fields later).
