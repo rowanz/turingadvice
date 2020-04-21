@@ -39,7 +39,7 @@ curl -o ~/miniconda.sh -O  https://repo.anaconda.com/miniconda/Miniconda3-latest
 ```
 Then, set up an environment (optional) and install the requirements.
 ```
-conda create --name turingadvice python=3.7 && conda activate news && conda install -y python=3.7 tqdm numpy pyyaml scipy ipython mkl mkl-include cython typing h5py pandas matplotlib lxml && pip install -r requirements.txt
+conda create --name turingadvice python=3.7 && conda activate turingadvice && conda install -y python=3.7 tqdm numpy pyyaml scipy ipython mkl mkl-include cython typing h5py pandas matplotlib lxml && pip install -r requirements.txt
 ```
 
 Misc notes:
