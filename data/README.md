@@ -4,7 +4,7 @@ Static dataset prep. Here, I have instructions and some scripts I used to create
 
 # RedditAdvice2019.
 
-You can download redditadvice2019 here:
+You can download redditadvice2019 [here](https://storage.googleapis.com/turingadvice/redditadvice2019.jsonl), or by running the following command:
 
 `gsutil cp gs://turingadvice/redditadvice2019.jsonl .`
 
