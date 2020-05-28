@@ -92,7 +92,7 @@ curl -X POST -d '{"instances": [{"title": "I am trying to debug this code and it
 Let me know if you encounter trouble with making a web demo, and we'll figure out a solution!
 
 ## Making the submission
-Please [email me](https://scr.im/rowan) with a public-facing URL to your web API, and I can get the evaluation started. Though in the paper, we suggest having leaderboard submitters pay the mechanical turk fee, we're happy to make an exception for for the first couple of teams while we iron out the details :)
+Please email me (rowanz at cs.washington.edu)  with a public-facing URL to your web API, and I can get the evaluation started. Though in the paper, we suggest having leaderboard submitters pay the mechanical turk fee, we're happy to make an exception for for the first couple of teams while we iron out the details :)
 
 Also, please include in your email 1) a name for your model, 2) your team name (including your affiliation), and optionally, 3) a github repo or paper link. (I can also update these fields later).
 
