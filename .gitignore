@@ -1,3 +1,9 @@
+# Large data files
+advice.jsonl
+train.tsv
+test.tsv
+val.tsv
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
