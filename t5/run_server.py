@@ -30,14 +30,14 @@ logger = logging.getLogger(__name__)
 top_p = 0.94
 
 model_types = {
-    '11B': ('gs://replace-this-with-your-copied-checkpoint-path-please-11B/model.ckpt-1010000', 8, 1),
-    '3B': ('gs://replace-this-with-your-copied-checkpoint-path-please-3B/model.ckpt-1018748', 8, 1),
+    '11B': ('gs://seri2021-advice/turingadvice/baselines/t5/11B/model.ckpt-1010000', 8, 1),
+    '3B': ('gs://seri2021-advice/turingadvice/baselines/t5/3B/model.ckpt-1018748', 8, 1),
     'large': (
-        'gs://replace-this-with-your-copied-checkpoint-path-please-large/model.ckpt-1038196', 8, 1),
+        'gs://seri2021-advice/turingadvice/baselines/t5/large/model.ckpt-1038196', 8, 1),
     'base': (
-        'gs://replace-this-with-your-copied-checkpoint-path-please-base/model.ckpt-1046772', 8, 1),
+        'gs://seri2021-advice/turingadvice/baselines/t5/base/model.ckpt-1046772', 8, 1),
     'small': (
-        'gs://replace-this-with-your-copied-checkpoint-path-please-small/model.ckpt-1037496', 1, 8)
+        'gs://seri2021-advice/turingadvice/baselines/t5/small/model.ckpt-1037496', 1, 8)
 }
 
 def load_estimator_and_predict_items(items, date, model_size):

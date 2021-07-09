@@ -71,7 +71,7 @@ save_checkpoint_steps=$(($((num_train_steps + 1)) / 10 ))
 
 # you can adjust the learning rates if you want
 for learning_rate in 0.001 0.002; do
-    OUTPUT_DIR="TODO"
+    OUTPUT_DIR="gs://seri2021-advice/turingadvice/reproduction/${model_type}"
 
     echo "Running for ${num_epochs} epochs, or ${num_train_steps} steps at a batch size of ${batch_size}."
     echo "Storing in ${OUTPUT_DIR}"
