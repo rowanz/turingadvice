@@ -8,19 +8,19 @@ model_type=${1}
 
 if [ ${model_type} == "small" ]; then
     batch_size_per_8core=4
-    num_tpu_cores=256
+    num_tpu_cores=8
     model_parallelism=4
 elif [ ${model_type} == "base" ]; then
     batch_size_per_8core=4
-    num_tpu_cores=256
+    num_tpu_cores=8
     model_parallelism=4
 elif [ ${model_type} == "large" ]; then
     batch_size_per_8core=2
-    num_tpu_cores=512
+    num_tpu_cores=8
     model_parallelism=8
 elif [ ${model_type} == "3B" ]; then
     batch_size_per_8core=2
-    num_tpu_cores=512
+    num_tpu_cores=8
     model_parallelism=8
 
     # TURBO MODE
