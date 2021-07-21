@@ -1,8 +1,7 @@
 # Large data files
-advice.jsonl
-train.tsv
-test.tsv
-val.tsv
+*.jsonl
+*.tsv
+ans_pairs.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
