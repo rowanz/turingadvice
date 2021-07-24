@@ -1,9 +1,15 @@
 import tensorflow as tf
 
-from reward.comparative.data.tsvs_to_tfrecords import TFRECORDS_PATH, SEQUENCE_LENGTH
+from reward.comparative.data.tsvs_to_tfrecords import \
+    SEQUENCE_LENGTH, TFRECORDS_PATH as LOCAL_TFRECORDS_PATH
 
-def get_dataset(split, batch_size):
-    tfrecords_path = TFRECORDS_PATH.format(split=split)
+GCS_TFRECORDS_PATH = "gs://seri2021-advice/reward/comparative/data/{split}.tfrecords"
+
+def get_dataset(split, batch_size, from_local):
+    if from_local:
+        tfrecords_path = LOCAL_TFRECORDS_PATH.format(split=split)
+    else:
+        tfrecords_path = GCS_TFRECORDS_PATH.format(split=split)
     serialized_dataset = tf.data.TFRecordDataset(tfrecords_path)
     feature_description = {}
     feature_description = {
