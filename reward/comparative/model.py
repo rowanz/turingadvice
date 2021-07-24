@@ -2,16 +2,19 @@ import gin
 import tensorflow.compat.v1 as tf
 import mesh_tensorflow as mtf
 from mesh_tensorflow.transformer.transformer import \
-    Unitransformer, get_vocab_embedding_cls, make_layer_stack
+    Unitransformer, Bitransformer, get_vocab_embedding_cls, make_layer_stack
 
-from reward.comparative.loss_fn import comparative_reward_pair_loss
+from reward.comparative.loss_fn import comparative_paired_rewards_loss
+
+def get_dims_by_name(tensor, dim_name):
+    return [d for d in tensor.shape.dims if d.name == dim_name]
 
 class ScalarOutputUnitransformer(Unitransformer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.output_vocab_size = None
         self.autoregressive = False
-        self._reward_dim =  mtf.Dimension("reward", 1)
+        self._reward_dim = mtf.Dimension("reward", 1)
 
     def _call_internal(self, context, inputs, targets=None):
         """
@@ -68,34 +71,43 @@ class ScalarOutputUnitransformer(Unitransformer):
                     output_shape=x.shape)
             x += pos_emb
         x = self.layer_stack.call(context, x)                                                                                                                                                                                                                                                                                        
-        logits = mtf.layers.dense(
+        rewards = mtf.layers.dense(
             x,
             new_dims=self._reward_dim,
-            reduced_dims=[d for d in x.shape.dims if d.name=="d_model"],
+            reduced_dims=get_dims_by_name(x, "d_model"),
             use_bias=False,
             variable_dtype=context.variable_dtype,
             name="reward_head"
         )
         # Squeeze out size 1 reward dimension
-        squeezed_shape = mtf.Shape([d for d in logits.shape.dims if d.name != "reward"])
-        logits = mtf.reshape(logits, squeezed_shape, name="squeeze_reward_dim")
-        """
-        if self.shared_embedding_and_softmax_weights:
-            logits = vocab_embedding.hidden_to_logits(x)
-        else:
-            logits = mtf.layers.dense(
-                x, self.output_vocab_dim, use_bias=False,
-                variable_dtype=context.variable_dtype,
-                reduced_dims=x.shape.dims[-1:],
-                name="logits")
-        """
-        if targets is not None and context.losses is not None:
-            context.losses.append(
-
+        squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "reward"])
+        rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_reward_dim")
+        # Keep reward only at EOS positions
+        targets_length_dim = get_dims_by_name(
+            tensor=context.sequence_id,
+            dim_name="targets_length"
+        )[0]
+        shifted_segmentation = mtf.shift(
+            context.sequence_id,
+            offset=-1,
+            dim=targets_length_dim,
+            wrap=False
+        )
+        is_eos = mtf.not_equal(context.sequence_id, shifted_segmentation)
+        eos_rewards_long = mtf.cast(is_eos, dtype=rewards.dtype) * rewards
+        eos_rewards = mtf.reduce_sum(
+            eos_rewards_long,
+            reduced_dim=targets_length_dim
+        )
+        ans_pair_dims = get_dims_by_name(rewards, "ans_pair")
+        if ans_pair_dims and context.losses is not None:
+            loss = comparative_paired_rewards_loss(
+                paired_rewards=eos_rewards,
+                ans_pair_dim=ans_pair_dims[0],
+                batch_dim=get_dims_by_name(rewards, "batch")[0]
             )
-            # context.losses.append(
-            #     self._compute_loss(context, logits, targets, self.output_vocab_dim))
-        return logits
+            context.losses.append(loss)
+        return eos_rewards
 
 @gin.configurable
 def make_reward_bitransformer(
@@ -116,3 +128,14 @@ def make_reward_bitransformer(
             layout=layout,
             mesh_shape=mesh_shape
         )
+    with gin.config_scope("decoder"):
+        decoder = ScalarOutputUnitransformer(
+        layer_stack=make_layer_stack(),
+        input_vocab_size=output_vocab_size,
+        output_vocab_size=output_vocab_size,
+        autoregressive=True,
+        name=decoder_name,
+        layout=layout,
+        mesh_shape=mesh_shape
+    )
+    return Bitransformer(encoder, decoder)
