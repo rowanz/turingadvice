@@ -10,65 +10,9 @@ from t5.data.utils import encode_string_features
 
 TFRECORDS_PATH = os.path.dirname(__file__) + "/{split}.tfrecords"
 SPLITS = ["train", "val", "test"]
-SEQUENCE_LENGTH = {"inputs": 1280, "targets1": 512, "targets2": 512}
+SEQUENCE_LENGTH = {"inputs": 1280, "targets": 512}
 
-def get_dataset(split):
-    tfrecords_path = TFRECORDS_PATH.format(split=split)
-    serialized_dataset = tf.data.TFRecordDataset(tfrecords_path)
-    feature_description = {}
-    feature_description = {
-        "inputs": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["inputs"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["inputs"]
-        ),
-        "inputs_position": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["inputs"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["inputs"]
-        ),
-        "targets1": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets1"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets1"]
-        ),
-        "targets1_position": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets1"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets1"]
-        ),
-        "targets2": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets2"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets2"]
-        ),
-        "targets2_position": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets2"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets2"]
-        ),
-        "inputs_segmentation": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["inputs"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["inputs"]
-        ),
-        "targets1_segmentation": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets1"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets1"]
-        ),
-        "targets2_segmentation": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets2"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets2"]
-        )
-    }
-    tokens_dataset = serialized_dataset.map(
-        lambda x: tf.io.parse_single_example(x, feature_description)
-    )
-    return tokens_dataset
-
-def serialize_tokens(*values, colnames):
+def _serialize_tokens(*values, colnames):
     example_data = {
         colnames[i]: tf.train.Feature(
             int64_list=tf.train.Int64List(value=tokens)
@@ -78,9 +22,9 @@ def serialize_tokens(*values, colnames):
     example = tf.train.Example(features=tf.train.Features(feature=example_data))
     return example.SerializeToString()
 
-def tf_serialize_tokens(tf_tokens_dict):
+def _tf_serialize_tokens(tf_tokens_dict):
     serialize_with_colnames = partial(
-        serialize_tokens,
+        _serialize_tokens,
         colnames=list(tf_tokens_dict.keys())
     )
     tf_string = tf.py_function(
@@ -105,17 +49,21 @@ if __name__ == "__main__":
         )
         tokens_dataset = encode_string_features(
             dataset=tsv_dataset,
-            vocabulary=TOKENIZER,
+            vocabulary=TOKENIZER,   
             copy_plaintext=False,
             keys=TSV_COLNAMES
         )
+        SEQUENCE_LENGTH.update({
+            "targets1": SEQUENCE_LENGTH["targets"],
+            "targets2": SEQUENCE_LENGTH["targets"]
+        })
         packed_dataset = pack_or_pad(
             dataset=tokens_dataset,
             length=SEQUENCE_LENGTH,
-            pack=(split == "train"),
+            pack=False, # Packed training not supported
             ensure_eos=True
         )
-        serialized_dataset = packed_dataset.map(tf_serialize_tokens)
+        serialized_dataset = packed_dataset.map(_tf_serialize_tokens)
         tfrecords_path = TFRECORDS_PATH.format(split=split)
         tfrecords_writer = tf.data.experimental.TFRecordWriter(tfrecords_path)
         tfrecords_writer.write(serialized_dataset)
