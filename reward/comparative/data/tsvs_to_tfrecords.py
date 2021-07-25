@@ -1,7 +1,7 @@
 import os
 from functools import partial
 
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from mesh_tensorflow.transformer.dataset import pack_or_pad
 
 from data.to_tfrecord_t5 import encoder as TOKENIZER
@@ -65,6 +65,13 @@ if __name__ == "__main__":
         )
         serialized_dataset = packed_dataset.map(_tf_serialize_tokens)
         tfrecords_path = TFRECORDS_PATH.format(split=split)
+        # Shuffle dataset
+        shuffled_dataset = serialized_dataset.shuffle(
+            buffer_size = 10000,
+            seed = 41
+        )
+        # Write tfrecords dataset to disk
+        print(f"Writting '{split}' tfrecords")
         tfrecords_writer = tf.data.experimental.TFRecordWriter(tfrecords_path)
-        tfrecords_writer.write(serialized_dataset)
+        tfrecords_writer.write(shuffled_dataset)
         tfrecords_writer.close()
