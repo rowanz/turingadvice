@@ -1,6 +1,5 @@
 import os
 
-from t5.generate_test import FLAGS
 from absl import flags
 import tensorflow.compat.v1 as tf
 import mesh_tensorflow.transformer as mtf_transformer
@@ -69,12 +68,12 @@ def main(_):
     model = ComparativeRewardModel(
         model_dir=FLAGS.model_dir,
         tpu=os.uname()[1],
-        tpy_topology=FLAGS.tpu_topology,
+        tpu_topology=FLAGS.tpu_topology,
         model_parallelism=FLAGS.model_parallelism,
         batch_size=FLAGS.train_batch_size,
         sequence_length=SEQUENCE_LENGTH,
         learning_rate_schedule=FLAGS.learning_rate,
-        save_checkpoints_steps=FLAGS.svae_checkpoints_steps,
+        save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         keep_checkpoint_max=None,
         iterations_per_loop=FLAGS.iterations_per_loop
     )

@@ -11,7 +11,6 @@ def get_dataset(split, from_local):
     else:
         tfrecords_path = GCS_TFRECORDS_PATH.format(split=split)
     serialized_dataset = tf.data.TFRecordDataset(tfrecords_path)
-    feature_description = {}
     feature_description = {
         "inputs": tf.io.FixedLenFeature(
             SEQUENCE_LENGTH["inputs"],
