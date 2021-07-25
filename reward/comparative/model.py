@@ -1,141 +1,88 @@
+import os
+
 import gin
 import tensorflow.compat.v1 as tf
-import mesh_tensorflow as mtf
-from mesh_tensorflow.transformer.transformer import \
-    Unitransformer, Bitransformer, get_vocab_embedding_cls, make_layer_stack
+from mesh_tensorflow.transformer import utils
 
-from reward.comparative.loss_fn import comparative_paired_rewards_loss
+from reward.comparative.data.tsvs_to_tfrecords import SEQUENCE_LENGTH
+from reward.comparative.data import get_dataset
+from t5.models.mtf_model import MtfModel, _get_latest_checkpoint_from_dir, \
+  _operative_config_path
+from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
 
-def get_dims_by_name(tensor, dim_name):
-    return [d for d in tensor.shape.dims if d.name == dim_name]
+REDDIT_TASK_NAME = "reddit_v002"
 
-class ScalarOutputUnitransformer(Unitransformer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.output_vocab_size = None
-        self.autoregressive = False
-        self._reward_dim = mtf.Dimension("reward", 1)
+class ComparativeRewardModel(MtfModel):
+  def train(self, steps, init_checkpoint=None):
+    """
+    This method is a combination of MtfModel.train and
+    mtf.transformer.utils.train_model, which MtfModel.train calls. It was
+    re-written to fit our tfrecords dataset, which is already tokenized.
 
-    def _call_internal(self, context, inputs, targets=None):
-        """
-        Overrrides Unitransformer._call_internal
-        Adds losses to context!
-        """
-        mesh = inputs.mesh
-        if self.ensemble_dim and self.ensemble_dim not in inputs.shape.dims:
-            # Training an ensemble where all models are trained on the same examples.
-            inputs = mtf.broadcast(inputs, [self.ensemble_dim] + inputs.shape.dims)
-            if targets:
-                targets = mtf.broadcast(
-                    targets, [self.ensemble_dim] + targets.shape.dims)
-        if "embedding" in context.shared_params:
-            vocab_embedding = context.shared_params["embedding"]
-        else:
-            vocab_embedding = get_vocab_embedding_cls()(
-                mesh,
-                self.input_vocab_dim,
-                self.model_dim,
-                context.variable_dtype,
-                name="embedding",
-                ensemble_dim=self.ensemble_dim)
-        x = vocab_embedding.ids_to_embedding(inputs)
-        if self.positional_embedding:
-            if "positional_embedding" in context.shared_params:
-                pos_emb_var = context.shared_params["positional_embedding"]
-            else:
-                pos_emb_var = mtf.layers.embedding_weights(
-                    mesh, self.max_length_dim, self.model_dim, context.variable_dtype,
-                    "positional_embedding", ensemble_dim=self.ensemble_dim)
-            if (context.length_dim is not None and
-                context.length_dim.size > self.max_length_dim.size):
-                message = (
-                    "Length dimenison exceeds size of positional embedding table. "
-                    "length_dim.size > max_length_dim.size %s vs %s."
-                    % (context.length_dim, self.max_length_dim))
-                if context.position_is_default:
-                    # Definitely getting overflow in this case.
-                    raise ValueError(message)
-                else:
-                    tf.logging.warning(
-                        message +
-                        " This may be OK if there are several shorter sequences packed "
-                        "together.  Otherwise, the later positions will get zeros.")
-            if context.position_is_default:
-                pos_emb = mtf.rename_dimension(
-                    mtf.slice(pos_emb_var, 0, context.length_dim.size,
-                            self.max_length_dim.name),
-                    self.max_length_dim.name, context.length_dim.name)
-            else:
-                pos_emb = mtf.gather(
-                    pos_emb_var, context.position, self.max_length_dim,
-                    output_shape=x.shape)
-            x += pos_emb
-        x = self.layer_stack.call(context, x)                                                                                                                                                                                                                                                                                        
-        rewards = mtf.layers.dense(
-            x,
-            new_dims=self._reward_dim,
-            reduced_dims=get_dims_by_name(x, "d_model"),
-            use_bias=False,
-            variable_dtype=context.variable_dtype,
-            name="reward_head"
+    Args:
+    steps: int
+        Number of training steps.
+    init_checkpoint: str
+        Read from this checkpoint path when initializing variables.
+    """
+    vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
+    estimator = self.estimator(vocabulary, init_checkpoint)
+    def input_fn(params):
+      del params
+      dataset = get_dataset(split="train", from_local=False)
+      dataset = dataset.repeat().batch(
+          self.batch_size * (self._ensemble_inputs or 1),
+          drop_remainder=True
         )
-        # Squeeze out size 1 reward dimension
-        squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "reward"])
-        rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_reward_dim")
-        # Keep reward only at EOS positions
-        targets_length_dim = get_dims_by_name(
-            tensor=context.sequence_id,
-            dim_name="targets_length"
-        )[0]
-        shifted_segmentation = mtf.shift(
-            context.sequence_id,
-            offset=-1,
-            dim=targets_length_dim,
-            wrap=False
-        )
-        is_eos = mtf.not_equal(context.sequence_id, shifted_segmentation)
-        eos_rewards_long = mtf.cast(is_eos, dtype=rewards.dtype) * rewards
-        eos_rewards = mtf.reduce_sum(
-            eos_rewards_long,
-            reduced_dim=targets_length_dim
-        )
-        ans_pair_dims = get_dims_by_name(rewards, "ans_pair")
-        if ans_pair_dims and context.losses is not None:
-            loss = comparative_paired_rewards_loss(
-                paired_rewards=eos_rewards,
-                ans_pair_dim=ans_pair_dims[0],
-                batch_dim=get_dims_by_name(rewards, "batch")[0]
-            )
-            context.losses.append(loss)
-        return eos_rewards
+      dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+      return dataset
+    estimator.train(input_fn=input_fn, max_steps=steps)
 
-@gin.configurable
-def make_reward_bitransformer(
-    input_vocab_size=gin.REQUIRED,
-    output_vocab_size=gin.REQUIRED,
-    layout=None,
-    mesh_shape=None,
-    encoder_name="encoder",
-    decoder_name="decoder"
-    ):
-    with gin.config_scope("encoder"):
-        encoder = Unitransformer(
-            layer_stack=make_layer_stack(),
-            input_vocab_size=input_vocab_size,
-            output_vocab_size=None,
-            autoregressive=False,
-            name=encoder_name,
-            layout=layout,
-            mesh_shape=mesh_shape
-        )
-    with gin.config_scope("decoder"):
-        decoder = ScalarOutputUnitransformer(
-        layer_stack=make_layer_stack(),
-        input_vocab_size=output_vocab_size,
-        output_vocab_size=output_vocab_size,
-        autoregressive=True,
-        name=decoder_name,
-        layout=layout,
-        mesh_shape=mesh_shape
+  def eval(self, checkpoint_steps=None, summary_dir=None, split="validation"):
+    if checkpoint_steps == -1:
+      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
+    vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
+    def eval_dataset_fn(sequence_length, vocabulary, dataset_split):
+      if sequence_length != SEQUENCE_LENGTH:
+        raise ValueError("Requested unsupported `sequence_length`")
+      return get_dataset(split=dataset_split, from_local=False)
+    with gin.unlock_config():
+      gin.parse_config_file(_operative_config_path(self._model_dir))
+    utils.eval_model(
+      estimator=self.estimator(vocabulary),
+      vocabulary=vocabulary,
+      sequence_length=self._sequence_length,
+      batch_size=self.batch_size,
+      dataset_split=split,
+      model_dir=self._model_dir,
+      eval_dataset_fn=eval_dataset_fn,
+      summary_dir=summary_dir,
+      checkpoint_steps=checkpoint_steps
     )
-    return Bitransformer(encoder, decoder)
+
+  def finetune(
+    self, finetune_steps, pretrained_model_dir, pretrained_checkpoint_step=-1
+    ):
+    if pretrained_checkpoint_step == -1:
+      checkpoint_step = _get_latest_checkpoint_from_dir(pretrained_model_dir)
+    else:
+      checkpoint_step = pretrained_checkpoint_step
+    with gin.unlock_config():
+      gin.parse_config_file(_operative_config_path(pretrained_model_dir))
+    model_ckpt = "model.ckpt-" + str(checkpoint_step)
+    self.train(
+      steps=checkpoint_step + finetune_steps,
+      init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
+    )
+
+  def predict(
+    self, input_file, output_file, checkpoint_steps=-1,
+    sentencepiece_model_path=DEFAULT_SPM_PATH
+    ):
+    raise NotImplementedError
+
+  def export(
+    self, export_dir=None, checkpoint_step=-1,
+    sentencepiece_model_path=DEFAULT_SPM_PATH
+    ):
+    raise NotImplementedError
