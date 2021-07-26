@@ -67,9 +67,9 @@ def get_dataset(split, from_local):
 
 def _stack_answer_pairs(sample, concat=True):
     stack_fn = tf.concat if concat else tf.stack
-    targets = stack_fn([sample["targets1"], sample["targets2"]])
-    targets_position = stack_fn([sample["targets1_position"], sample["targets2_position"]])
-    targets_segmentation = stack_fn([sample["targets1_segmentation"], sample["targets2_segmentation"]])
+    targets = stack_fn([sample["targets1"], sample["targets2"]], axis=0)
+    targets_position = stack_fn([sample["targets1_position"], sample["targets2_position"]], axis=0)
+    targets_segmentation = stack_fn([sample["targets1_segmentation"], sample["targets2_segmentation"]], axis=0)
     stacked_sample = {
         "inputs": sample["inputs"],
         "inputs_position": sample["inputs_position"],
