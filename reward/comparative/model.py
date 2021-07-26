@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 
 import gin
 import tensorflow.compat.v1 as tf
@@ -26,7 +27,9 @@ class ComparativeRewardModel(MtfModel):
         Read from this checkpoint path when initializing variables.
     """
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
-    estimator = self.estimator(vocabulary, init_checkpoint)
+    sequence_length = deepcopy(self._sequence_length)
+    sequence_length.update({"targets": sequence_length["targets"] * 2})
+    estimator = self.estimator(vocabulary,init_checkpoint, sequence_length)
     def input_fn(params):
       del params
       dataset = get_dataset(split="train", from_local=False)
@@ -86,3 +89,31 @@ class ComparativeRewardModel(MtfModel):
     sentencepiece_model_path=DEFAULT_SPM_PATH
     ):
     raise NotImplementedError
+
+  def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
+    """
+    A version of MtfModel.estimator which also accepts the `sequence_length`
+    parameter.
+    """
+    return utils.get_estimator(
+        model_type=self._model_type,
+        input_vocab_size=utils.inputs_vocabulary(vocabulary).vocab_size,
+        output_vocab_size=utils.targets_vocabulary(vocabulary).vocab_size,
+        layout_rules=self._layout_rules,
+        mesh_shape=self._mesh_shape,
+        model_dir=self._model_dir,
+        batch_size=self.batch_size,
+        sequence_length=sequence_length or self._sequence_length,
+        autostack=self._autostack,
+        learning_rate_schedule=self._learning_rate_schedule,
+        keep_checkpoint_max=self._keep_checkpoint_max,
+        save_checkpoints_steps=self._save_checkpoints_steps,
+        optimizer=self._optimizer,
+        predict_fn=self._predict_fn,
+        variable_filter=self._variable_filter,
+        ensemble_inputs=self._ensemble_inputs,
+        use_tpu=self._tpu,
+        tpu_job_name=self._tpu_job_name,
+        iterations_per_loop=self._iterations_per_loop,
+        cluster=self._cluster,
+        init_checkpoint=init_checkpoint)
