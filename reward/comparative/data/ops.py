@@ -3,7 +3,7 @@ import tensorflow as tf
 from reward.comparative.data.tsvs_to_tfrecords import \
     SEQUENCE_LENGTH, TFRECORDS_PATH as LOCAL_TFRECORDS_PATH
 
-GCS_TFRECORDS_PATH = "gs://seri2021-advice/reward/comparative/data/{split}.tfrecords"
+GCS_TFRECORDS_PATH = "gs://seri2021-advice/turingadvice/reward/comparative/data/{split}.tfrecords"
 
 def get_dataset(split, from_local):
     if from_local:
