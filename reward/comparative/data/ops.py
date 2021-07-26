@@ -61,13 +61,15 @@ def get_dataset(split, from_local):
     tokens_dataset = serialized_dataset.map(
         lambda x: tf.io.parse_single_example(x, feature_description)
     )
+
     stacked_dataset = tokens_dataset.map(_stack_answer_pairs)
     return stacked_dataset
 
-def _stack_answer_pairs(sample):
-    targets = tf.stack([sample["targets1"], sample["targets2"]])
-    targets_position = tf.stack([sample["targets1_position"], sample["targets2_position"]])
-    targets_segmentation = tf.stack([sample["targets1_segmentation"], sample["targets2_segmentation"]])
+def _stack_answer_pairs(sample, concat=True):
+    stack_fn = tf.concat if concat else tf.stack
+    targets = stack_fn([sample["targets1"], sample["targets2"]])
+    targets_position = stack_fn([sample["targets1_position"], sample["targets2_position"]])
+    targets_segmentation = stack_fn([sample["targets1_segmentation"], sample["targets2_segmentation"]])
     stacked_sample = {
         "inputs": sample["inputs"],
         "inputs_position": sample["inputs_position"],
