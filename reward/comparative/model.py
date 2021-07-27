@@ -5,11 +5,11 @@ import gin
 import tensorflow.compat.v1 as tf
 from mesh_tensorflow.transformer import utils
 
+from reward.comparative.data import get_dataset, eval_dataset_fn
 from reward.comparative.data.tsvs_to_tfrecords import SEQUENCE_LENGTH
-from reward.comparative.data import get_dataset
-from t5.models.mtf_model import MtfModel, _get_latest_checkpoint_from_dir, \
-  _operative_config_path
 from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
+from t5.models.mtf_model import \
+  MtfModel, _get_latest_checkpoint_from_dir, _operative_config_path
 
 REDDIT_TASK_NAME = "reddit_v002"
 
@@ -45,10 +45,6 @@ class ComparativeRewardModel(MtfModel):
     if checkpoint_steps == -1:
       checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
-    def eval_dataset_fn(sequence_length, vocabulary, dataset_split):
-      if sequence_length != SEQUENCE_LENGTH:
-        raise ValueError("Requested unsupported `sequence_length`")
-      return get_dataset(split=dataset_split, from_local=False)
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
     utils.eval_model(
