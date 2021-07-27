@@ -84,6 +84,8 @@ def _stack_answer_pairs(sample, concat=True):
     return stacked_sample
 
 def eval_dataset_fn(sequence_length, vocabulary, dataset_split):
+    if sequence_length != SEQUENCE_LENGTH:
+        raise ValueError("Requested unsupported `sequence_length`")
     def ranking_accuracy(targets, predictions):
         del targets
         n = 0
