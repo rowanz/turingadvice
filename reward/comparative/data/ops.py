@@ -1,4 +1,7 @@
+from functools import partial
+
 import tensorflow as tf
+import mesh_tensorflow.transformer.dataset as transformer_dataset
 
 from reward.comparative.data.tsvs_to_tfrecords import \
     SEQUENCE_LENGTH, TFRECORDS_PATH as LOCAL_TFRECORDS_PATH
@@ -79,3 +82,20 @@ def _stack_answer_pairs(sample, concat=True):
         "targets_segmentation": targets_segmentation
     }
     return stacked_sample
+
+def eval_dataset_fn(sequence_length, vocabulary, dataset_split):
+    def ranking_accuracy(targets, predictions):
+        del targets
+        n = 0
+        n_correct = 0
+        for rewards in predictions:
+            n += 1
+            if rewards[1] > rewards[0]:
+                n_correct += 1
+        return n_correct / n
+    return transformer_dataset.EvalDataset(
+        "reward_pairs",
+        partial(get_dataset, split=dataset_split),
+        None,
+        [ranking_accuracy]
+    )
