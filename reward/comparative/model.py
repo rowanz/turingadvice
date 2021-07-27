@@ -41,7 +41,7 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, checkpoint_steps=None, summary_dir=None, split="validation"):
+  def eval(self, checkpoint_steps=None, summary_dir=None, split="val"):
     if checkpoint_steps == -1:
       checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()

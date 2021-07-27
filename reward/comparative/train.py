@@ -43,7 +43,6 @@ flags.DEFINE_integer(
     default=1,
     help="Number of cores per model instance."
 )
-
 flags.DEFINE_integer(
     name="num_train_steps",
     default=10000,
