@@ -74,4 +74,3 @@ if __name__ == "__main__":
         print(f"Writting '{split}' tfrecords")
         tfrecords_writer = tf.data.experimental.TFRecordWriter(tfrecords_path)
         tfrecords_writer.write(shuffled_dataset)
-        tfrecords_writer.close()
