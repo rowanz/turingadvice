@@ -22,9 +22,9 @@ flags.DEFINE_string(
     help="Model size, must be in small, base, large, 3B, 11B."
 )
 flags.DEFINE_integer(
-    name="checkpoint_steps",
+    name="eval_checkpoint_step",
     default=None,
-    help="Steps in checkpoint to be evaluated."
+    help="Step in checkpoints to be evaluated."
 )
 flags.DEFINE_integer(
     name="iterations_per_loop",
@@ -55,8 +55,8 @@ def main(_):
         iterations_per_loop=FLAGS.iterations_per_loop,
     )
     model.eval(
-        checkpoint_steps=FLAGS.checkpoint_steps,
-        summary_dir=None, # Use model_dir
+        eval_checkpoint_step=FLAGS.eval_checkpoint_step,
+        eval_summary_dir=None, # Use model_dir
         split=FLAGS.split
     )
 

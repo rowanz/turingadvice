@@ -8,7 +8,7 @@ from reward.comparative.data.tsvs_to_tfrecords import \
 
 GCS_TFRECORDS_PATH = "gs://seri2021-advice/turingadvice/reward/comparative/data/{split}.tfrecords"
 
-def get_dataset(split, from_local):
+def get_dataset(split, from_local=False):
     if from_local:
         tfrecords_path = LOCAL_TFRECORDS_PATH.format(split=split)
     else:
@@ -64,7 +64,6 @@ def get_dataset(split, from_local):
     tokens_dataset = serialized_dataset.map(
         lambda x: tf.io.parse_single_example(x, feature_description)
     )
-
     stacked_dataset = tokens_dataset.map(_stack_answer_pairs)
     return stacked_dataset
 

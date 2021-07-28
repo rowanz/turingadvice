@@ -29,7 +29,7 @@ class ComparativeRewardModel(MtfModel):
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
     sequence_length = deepcopy(self._sequence_length)
     sequence_length.update({"targets": sequence_length["targets"] * 2})
-    estimator = self.estimator(vocabulary,init_checkpoint, sequence_length)
+    estimator = self.estimator(vocabulary, init_checkpoint, sequence_length)
     def input_fn(params):
       del params
       dataset = get_dataset(split="train", from_local=False)
@@ -41,23 +41,29 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, checkpoint_steps=None, summary_dir=None, split="val"):
-    if checkpoint_steps == -1:
-      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
+  def eval(self, eval_checkpoint_step=None, eval_summary_dir=None, split="val"):
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
+    sequence_length = deepcopy(self._sequence_length)
+    sequence_length.update({"targets": sequence_length["targets"] * 2})
+    # "I have no idea why but I think this must be needed?" - Rowan
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
-    utils.eval_model(
-      estimator=self.estimator(vocabulary),
-      vocabulary=vocabulary,
-      sequence_length=self._sequence_length,
-      batch_size=self.batch_size,
-      dataset_split=split,
-      model_dir=self._model_dir,
-      eval_dataset_fn=eval_dataset_fn,
-      summary_dir=summary_dir,
-      checkpoint_steps=checkpoint_steps
+    estimator = self.estimator(vocabulary, eval_checkpoint_step, sequence_length)
+    eval_dataset = eval_dataset_fn(sequence_length, vocabulary, split)
+    def _input_fn(params):
+      del params
+      return eval_dataset\
+        .dataset_fn()\
+        .repeat()\
+        .batch(self.batch_size, drop_remainder=True)\
+        .prefetch(tf.data.experimental.AUTOTUNE)
+    metrics = estimator.evaluate(
+      input_fn=_input_fn,
+      steps=400, # Why this number?
+      checkpoint_path=None,
+      name=eval_dataset.name
     )
+    print(metrics)
 
   def finetune(
     self, finetune_steps, pretrained_model_dir, pretrained_checkpoint_step=-1
