@@ -55,6 +55,7 @@ class ScalarOutputUnitransformer(Unitransformer):
                 ans_pair_dim=get_dims_by_name(reward_pairs, "ans_pair")[0],
                 batch_dim=get_dims_by_name(reward_pairs, "batch")[0]
             )
+            mtf.scalar_summary("silly_loss", loss)
             if context.losses:
                 context.losses.append(loss)
             else:
@@ -174,3 +175,21 @@ def make_reward_bitransformer(
         mesh_shape=mesh_shape
     )
     return Bitransformer(encoder, decoder)
+
+def infer_model(
+    estimator,
+    vocabulary,
+    sequence_length,
+    batch_size,
+    model_type,
+    model_dir,
+    eval_checkpoint_step,
+    input_filename,
+    output_filename
+    ):
+    """
+    Replaces mtf.transformer.utils.decode_from_file
+    """
+    
+
+    pass
