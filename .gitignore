@@ -1,6 +1,7 @@
 # Large data files
 *.jsonl
 *.tsv
+*.tfrecords
 ans_pairs.json
 
 # Byte-compiled / optimized / DLL files
