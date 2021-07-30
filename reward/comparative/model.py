@@ -76,7 +76,7 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
-      gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
+      # gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     self.train(
       steps=checkpoint_step + finetune_steps,
