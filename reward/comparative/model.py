@@ -16,17 +16,19 @@ from t5.models.mtf_model import \
 REDDIT_TASK_NAME = "reddit_v002"
 
 class ComparativeRewardModel(MtfModel):
-  def train(self, steps, init_checkpoint=None):
+  def train(self, dataset_id, steps, init_checkpoint=None):
     """
     This method is a combination of MtfModel.train and
     mtf.transformer.utils.train_model, which MtfModel.train calls. It was
     re-written to fit our tfrecords dataset, which is already tokenized.
 
     Args:
+    dataset_id: int
+      Dataset id. See reward/comparative/ops.py
     steps: int
-        Number of training steps.
+      Number of training steps.
     init_checkpoint: str
-        Read from this checkpoint path when initializing variables.
+      Read from this checkpoint path when initializing variables.
     """
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
     sequence_length = deepcopy(self._sequence_length)
@@ -34,7 +36,11 @@ class ComparativeRewardModel(MtfModel):
     estimator = self.estimator(vocabulary, init_checkpoint, sequence_length)
     def input_fn(params):
       del params
-      dataset = get_dataset(split="train", from_local=False)
+      dataset = get_dataset(
+        dataset_id=dataset_id,
+        split="train",
+        from_local=False
+      )
       dataset = dataset.repeat().batch(
           self.batch_size * (self._ensemble_inputs or 1),
           drop_remainder=True
@@ -68,7 +74,8 @@ class ComparativeRewardModel(MtfModel):
     print(metrics)
 
   def finetune(
-    self, finetune_steps, pretrained_model_dir, pretrained_checkpoint_step=-1
+    self, dataset_id, finetune_steps, pretrained_model_dir,
+    pretrained_checkpoint_step=-1
     ):
     if pretrained_checkpoint_step == -1:
       checkpoint_step = _get_latest_checkpoint_from_dir(pretrained_model_dir)
@@ -79,6 +86,7 @@ class ComparativeRewardModel(MtfModel):
       # gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     self.train(
+      dataset_id=dataset_id,
       steps=checkpoint_step + finetune_steps,
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
     )

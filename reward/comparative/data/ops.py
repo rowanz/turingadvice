@@ -19,13 +19,13 @@ LOCAL_TFRECORDS_PATH = os.path.join(
     "{dataset_id}",
     "{split}.tfrecords"
 )
-GCS_TFRECORDS_PATH = "gs://seri2021-advice/turingadvice/reward/comparative/data/{split}.tfrecords"
+GCS_TFRECORDS_PATH = "gs://seri2021-advice/turingadvice/reward/comparative/data/{dataset_id}/{split}.tfrecords"
 
-def get_dataset(split, from_local=False):
+def get_dataset(dataset_id, split, from_local=False):
     if from_local:
-        tfrecords_path = LOCAL_TFRECORDS_PATH.format(split=split)
+        tfrecords_path = LOCAL_TFRECORDS_PATH.format(split=split, dataset_id=dataset_id)
     else:
-        tfrecords_path = GCS_TFRECORDS_PATH.format(split=split)
+        tfrecords_path = GCS_TFRECORDS_PATH.format(split=split, dataset_id=dataset_id)
     serialized_dataset = tf.data.TFRecordDataset(tfrecords_path)
     feature_description = {
         "inputs": tf.io.FixedLenFeature(
