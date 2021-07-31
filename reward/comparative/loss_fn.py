@@ -1,7 +1,7 @@
 import tensorflow.compat.v1 as tf
 import mesh_tensorflow as mtf
 
-def comparative_paired_rewards_loss(paired_rewards, ans_pair_dim, batch_dim):
+def comparative_paired_rewards_loss(paired_rewards, ans_pair_dim):
     """
     Loss function for the comparative reward model from Learning to Summarize
     from Human Feedback (Stiennon et al.).
@@ -15,8 +15,6 @@ def comparative_paired_rewards_loss(paired_rewards, ans_pair_dim, batch_dim):
         response. Shape should be [ans_pair_dim, batch_dim].
     ans_pair_dim : mtf.Dimension
         Dimension of the answer pair. ans_pair_dim.size = 2
-    batch_dim : mtf.Dimension
-        Mini-batch dimension.
 
     Returns
     -------
@@ -30,4 +28,4 @@ def comparative_paired_rewards_loss(paired_rewards, ans_pair_dim, batch_dim):
         shape=[ans_pair_dim]
     )
     diff = mtf.reduce_sum(paired_rewards * diff_filter, reduced_dim=ans_pair_dim)
-    return mtf.reduce_sum(-mtf.log(mtf.sigmoid(diff)), reduced_dim=batch_dim)
+    return mtf.reduce_sum(-mtf.log(mtf.sigmoid(diff)))

@@ -99,21 +99,10 @@ class ScalarOutputUnitransformer(Unitransformer):
             reward_pairs.append(self._call_internal(context_1, inputs_1, None))
             # Compute loss and return
             reward_pairs = mtf.stack(reward_pairs, dim_name="ans_pair", name="stack_reward")
-            """
             loss = comparative_paired_rewards_loss(
                 reward_pairs,
-                ans_pair_dim=get_dims_by_name(reward_pairs, "ans_pair")[0],
-                batch_dim=get_dims_by_name(reward_pairs, "batch")[0]
+                ans_pair_dim=get_dims_by_name(reward_pairs, "ans_pair")[0]
             )
-            """
-            tf_diff_filter = tf.convert_to_tensor([-1, 1], dtype=reward_pairs.dtype)
-            diff_filter = mtf.import_tf_tensor(
-                reward_pairs.mesh,
-                tf_diff_filter,
-                shape=[get_dims_by_name(reward_pairs, "ans_pair")[0]]
-                                                                                            )
-            diff = mtf.reduce_sum(reward_pairs * diff_filter, reduced_dim=get_dims_by_name(reward_pairs, "ans_pair")[0])
-            loss = mtf.reduce_sum(-mtf.log(mtf.sigmoid(diff)))
             if context.losses:
                 context.losses.append(loss)
             else:
