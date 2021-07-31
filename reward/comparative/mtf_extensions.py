@@ -98,6 +98,7 @@ class ScalarOutputUnitransformer(Unitransformer):
             reward_pairs.append(self._call_internal(context_0, inputs_0, None))
             reward_pairs.append(self._call_internal(context_1, inputs_1, None))
             # Compute loss and return
+            """
             reward_pairs = mtf.stack(reward_pairs, dim_name="ans_pair", name="stack_reward")
             loss = comparative_paired_rewards_loss(
                 reward_pairs,
@@ -108,6 +109,8 @@ class ScalarOutputUnitransformer(Unitransformer):
                 context.losses.append(loss)
             else:
                 context.losses = [loss]
+            return reward_pairs
+            """
             return reward_pairs
         elif context.mode == tf.estimator.ModeKeys.PREDICT:
             assert context.length_dim.size == SEQUENCE_LENGTH["targets"]
