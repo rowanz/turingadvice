@@ -23,7 +23,7 @@ class ScalarOutputUnitransformer(Unitransformer):
         Overrrides Unitransformer._call_internal
         Adds losses to context!
         """
-        del targets
+        # del targets
         if context.mode in [tf.estimator.ModeKeys.TRAIN, tf.estimator.ModeKeys.EVAL]:
             # Input sequences (answers) should come stacked in pairs
             assert context.length_dim.size == SEQUENCE_LENGTH["targets"] * 2
@@ -106,12 +106,14 @@ class ScalarOutputUnitransformer(Unitransformer):
                 batch_dim=get_dims_by_name(reward_pairs, "batch")[0]
             )
             """
-            tf_loss = tf.constant(0.0)
-            loss = mtf.import_tf_tensor(
+            tf_diff_filter = tf.convert_to_tensor([-1, 1], dtype=reward_pairs.dtype)
+            diff_filter = mtf.import_tf_tensor(
                 reward_pairs.mesh,
-                tf_loss,
-                shape=[]
-            )
+                tf_diff_filter,
+                shape=[get_dims_by_name(reward_pairs, "ans_pair")[0]]
+                                                                                            )
+            diff = mtf.reduce_sum(reward_pairs * diff_filter, reduced_dim=get_dims_by_name(reward_pairs, "ans_pair")[0])
+            loss = mtf.reduce_sum(-mtf.log(mtf.sigmoid(diff)))
             if context.losses:
                 context.losses.append(loss)
             else:
