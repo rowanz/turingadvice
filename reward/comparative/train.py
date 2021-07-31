@@ -1,8 +1,8 @@
 import os
 
 from absl import flags
+import mesh_tensorflow
 import tensorflow.compat.v1 as tf
-import mesh_tensorflow.transformer as mtf_transformer
 
 from reward.comparative.mtf_extensions import make_reward_bitransformer
 from reward.comparative.model import ComparativeRewardModel
@@ -67,7 +67,8 @@ FLAGS = flags.FLAGS
 
 def main(_):
     # Monkey-patch Mesh-Tensorflow model instantiation
-    mtf_transformer.make_bitransformer = make_reward_bitransformer
+    mesh_tensorflow.transformer.transformer.make_bitransformer = \
+        make_reward_bitransformer
     # Initialize model
     model = ComparativeRewardModel(
         model_dir=FLAGS.model_dir,
