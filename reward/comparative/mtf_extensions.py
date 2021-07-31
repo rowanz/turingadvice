@@ -37,37 +37,66 @@ class ScalarOutputUnitransformer(Unitransformer):
                 )
             # Slice answer pairs and solve reward for each separately
             reward_pairs = []
-            for i in range(2):
-                inputs_i = _get_target_pair_element(inputs, i)
-                context_i = Context(
-                    mode=tf.estimator.ModeKeys.PREDICT,
-                    losses=None,
-                    length_dim=get_dims_by_name(inputs_i, "length")[0],
-                    sequence_id=_get_target_pair_element(context.sequence_id, i),
-                    subsequence_id=_get_target_pair_element(context.sequence_id, i),
-                    position=_get_target_pair_element(context.position, i),
-                    # Copy all other context attributes
-                    model=context.model,
-                    mesh=context.mesh,
-                    batch_dims=context.batch_dims,
-                    variable_dtype=context.variable_dtype,
-                    beam_dim=context.beam_dim,
-                    position_is_default=context.position_is_default,
-                    states=context.states,
-                    new_states=context.new_states,
-                    initial_position=context.initial_position,
-                    layer_outputs=context.layer_outputs,
-                    encoder_output=context.encoder_output,
-                    encoder_sequence_id=context.encoder_sequence_id,
-                    constant_states=context.constant_states,
-                    shared_params=context.shared_params,
-                    encoder_layer_outputs=context.encoder_layer_outputs,
-                    write_priority=context.write_priority,
-                    read_priority=context.read_priority,
-                    inputs=context.inputs,
-                    encoder_inputs=context.encoder_inputs
-                )
-                reward_pairs.append(self._call_internal(context_i, inputs_i, None))
+            inputs_0 = _get_target_pair_element(inputs, 0)
+            context_0 = Context(
+                mode=tf.estimator.ModeKeys.PREDICT,
+                losses=None,
+                length_dim=get_dims_by_name(inputs_0, "length")[0],
+                sequence_id=_get_target_pair_element(context.sequence_id, 0),
+                subsequence_id=_get_target_pair_element(context.sequence_id, 0),
+                position=_get_target_pair_element(context.position, 0),
+                # Copy all other context attributes
+                model=context.model,
+                mesh=context.mesh,
+                batch_dims=context.batch_dims,
+                variable_dtype=context.variable_dtype,
+                beam_dim=context.beam_dim,
+                position_is_default=context.position_is_default,
+                states=context.states,
+                new_states=context.new_states,
+                initial_position=context.initial_position,
+                layer_outputs=context.layer_outputs,
+                encoder_output=context.encoder_output,
+                encoder_sequence_id=context.encoder_sequence_id,
+                constant_states=context.constant_states,
+                shared_params=context.shared_params,
+                encoder_layer_outputs=context.encoder_layer_outputs,
+                write_priority=context.write_priority,
+                read_priority=context.read_priority,
+                inputs=context.inputs,
+                encoder_inputs=context.encoder_inputs
+            )
+            inputs_1 = _get_target_pair_element(inputs, 1)
+            context_1 = Context(
+                mode=tf.estimator.ModeKeys.PREDICT,
+                losses=None,
+                length_dim=get_dims_by_name(inputs_1, "length")[0],
+                sequence_id=_get_target_pair_element(context.sequence_id, 1),
+                subsequence_id=_get_target_pair_element(context.sequence_id, 1),
+                position=_get_target_pair_element(context.position, 1),
+                # Copy all other context attributes
+                model=context.model,
+                mesh=context.mesh,
+                batch_dims=context.batch_dims,
+                variable_dtype=context.variable_dtype,
+                beam_dim=context.beam_dim,
+                position_is_default=context.position_is_default,
+                states=context.states,
+                new_states=context.new_states,
+                initial_position=context.initial_position,
+                layer_outputs=context.layer_outputs,
+                encoder_output=context.encoder_output,
+                encoder_sequence_id=context.encoder_sequence_id,
+                constant_states=context.constant_states,
+                shared_params=context.shared_params,
+                encoder_layer_outputs=context.encoder_layer_outputs,
+                write_priority=context.write_priority,
+                read_priority=context.read_priority,
+                inputs=context.inputs,
+                encoder_inputs=context.encoder_inputs
+            )
+            reward_pairs.append(self._call_internal(context_0, inputs_0, None))
+            reward_pairs.append(self._call_internal(context_1, inputs_1, None))
             # Compute loss and return
             reward_pairs = mtf.stack(reward_pairs, dim_name="ans_pair", name="stack_reward")
             loss = comparative_paired_rewards_loss(
