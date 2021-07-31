@@ -1,10 +1,9 @@
-from copy import deepcopy
-
 import gin
 import tensorflow.compat.v1 as tf
 import mesh_tensorflow as mtf
 from mesh_tensorflow.transformer.transformer import \
-    Unitransformer, Bitransformer, get_vocab_embedding_cls, make_layer_stack
+    Unitransformer, Bitransformer, get_vocab_embedding_cls, make_layer_stack, \
+    Context
 
 from reward.comparative.data import SEQUENCE_LENGTH
 from reward.comparative.loss_fn import comparative_paired_rewards_loss
@@ -40,13 +39,34 @@ class ScalarOutputUnitransformer(Unitransformer):
             reward_pairs = []
             for i in range(2):
                 inputs_i = _get_target_pair_element(inputs, i)
-                context_i = deepcopy(context)
-                context_i.mode = tf.estimator.ModeKeys.PREDICT
-                context_i.losses = None
-                context_i.length_dim = get_dims_by_name(inputs_i, "length")[0]
-                context_i.sequence_id = _get_target_pair_element(context.sequence_id, i)
-                context_i.subsequence_id = _get_target_pair_element(context.subsequence_id, i)
-                context_i.position = _get_target_pair_element(context.position, i)
+                context_i = Context(
+                    mode=tf.estimator.ModeKeys.PREDICT,
+                    losses=None,
+                    length_dim=get_dims_by_name(inputs_i, "length")[0],
+                    sequence_id=_get_target_pair_element(context.sequence_id, i),
+                    subsequence_id=_get_target_pair_element(context.sequence_id, i),
+                    position=_get_target_pair_element(context.position, i),
+                    # Copy all other context attributes
+                    model=context.model,
+                    mesh=context.mesh,
+                    batch_dims=context.batch_dims,
+                    variable_dtype=context.variable_dtype,
+                    beam_dim=context.beam_dim,
+                    position_is_default=context.position_is_default,
+                    states=context.states,
+                    new_states=context.new_states,
+                    initial_position=context.initial_position,
+                    layer_outputs=context.layer_outputs,
+                    encoder_output=context.encoder_output,
+                    encoder_sequence_id=context.encoder_sequence_id,
+                    constant_states=context.constant_states,
+                    shared_params=context.shared_params,
+                    encoder_layer_outputs=context.encoder_layer_outputs,
+                    write_priority=context.write_priority,
+                    read_priority=context.read_priority,
+                    inputs=context.inputs,
+                    encoder_inputs=context.encoder_inputs
+                )
                 reward_pairs.append(self._call_internal(context_i, inputs_i, None))
             # Compute loss and return
             reward_pairs = mtf.stack(reward_pairs, dim_name="ans_pair", name="stack_reward")
@@ -55,7 +75,6 @@ class ScalarOutputUnitransformer(Unitransformer):
                 ans_pair_dim=get_dims_by_name(reward_pairs, "ans_pair")[0],
                 batch_dim=get_dims_by_name(reward_pairs, "batch")[0]
             )
-            mtf.scalar_summary("silly_loss", loss)
             if context.losses:
                 context.losses.append(loss)
             else:
@@ -122,8 +141,8 @@ class ScalarOutputUnitransformer(Unitransformer):
                 name="reward_head"
             )
             # Squeeze out size 1 reward dimension
-            squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "reward"])
-            rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_reward_dim")
+            # squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "reward"])
+            # rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_reward_dim")
             # Keep reward only at EOS positions
             length_dim = get_dims_by_name(
                 tensor=context.sequence_id,
