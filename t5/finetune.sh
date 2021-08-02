@@ -28,9 +28,9 @@ elif [ ${model_type} == "3B" ]; then
     num_tpu_cores=1024
     model_parallelism=8
 elif [ ${model_type} == "11B" ]; then
-    batch_size_per_8core=1
-    num_tpu_cores=1024
-    model_parallelism=32
+    batch_size_per_8core=2
+    num_tpu_cores=8
+    model_parallelism=8
 fi
 
 # wtf

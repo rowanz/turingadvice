@@ -341,9 +341,12 @@ def reddit_dataset_fn(split, shuffle_files=False):
 
     # raise ValueError("Need to fill in these filenames with your train, val, and test files.")
     fn = {
-        'train': 'gs://seri2021-advice/turingadvice/redditadvice2019/train.tsv',
-        'validation': 'gs://seri2021-advice/turingadvice/redditadvice2019/val.tsv',
-        'test': 'gs://seri2021-advice/turingadvice/redditadvice2019/test.tsv',
+        # 'train': 'gs://seri2021-advice/turingadvice/redditadvice2019/train.tsv',
+        # 'validation': 'gs://seri2021-advice/turingadvice/redditadvice2019/val.tsv',
+        # 'test': 'gs://seri2021-advice/turingadvice/redditadvice2019/test.tsv',
+        "train": "data/train.tsv",
+        "validation": "data/val.tsv",
+        "test": "data/test.tsv"
     }[split]
 
     # Load lines from the text file as examples.

@@ -4,7 +4,6 @@ Tokenization and tfrecord conversion for T5.
 
 T5 uses a small vocab, so I had to remove symbols that are OOV, etc.
 """
-
 import sys
 
 sys.path.append('../')
@@ -12,6 +11,7 @@ import random
 from datetime import datetime
 from data.encoder import trim_paragraphs
 from t5.data.sentencepiece_vocabulary import SentencePieceVocabulary
+from data.assertions import question_is_valid, answer_is_valid
 import sys
 from unidecode import unidecode
 
@@ -111,6 +111,29 @@ def tokenize_for_t5_advice_training(encoder, subreddit=None, date=None, title=No
     article_pieces['body'] = body
     return {k: _fix_reddit_text(v) for k, v in article_pieces.items()}
 
+def write_answer(question: dict, answer: dict, file):
+    """
+    Appends a line with the answer, including question context, to the file
+    """
+    tokenized_ans = tokenize_for_t5_advice_training(
+        encoder,
+        date=datetime.utcfromtimestamp(question["created_utc"]),
+        subreddit=question["subreddit"],
+        selftext=question["selftext"],
+        title=question["title"],
+        body=answer["body"]
+    )
+    if tokenized_ans:
+        file.write(
+            "\t".join([
+                tokenized_ans['subreddit'],
+                tokenized_ans['date'],
+                tokenized_ans['title'],
+                tokenized_ans['selftext'],
+                tokenized_ans['body']]
+            ) + "\n"
+        )
+
 if __name__ == '__main__':
     """
     Parameters
@@ -129,12 +152,12 @@ if __name__ == '__main__':
         print("Sorting questions by date")
         for line in tqdm(static_dataset):
             question = json.loads(line)
-            if len(question["selftext"]) < 64:
+            if question_is_valid(question):
                 continue
             else:
                 valid_ans_ids = [
                     ans["id"] for ans in question["good_comments"]
-                    if len(ans["body"]) >= 64
+                    if answer_is_valid(ans)
                 ]
                 valid_anss_per_question.append({
                     "q_id": question["id"],
@@ -174,23 +197,9 @@ if __name__ == '__main__':
         for line in tqdm(static_dataset):
             question = json.loads(line)
             for answer in question["good_comments"]:
-                if answer["id"] not in anss_in_dataset:
-                    continue
-                tokenized_ans = tokenize_for_t5_advice_training(
-                    encoder,
-                    date=datetime.utcfromtimestamp(question["created_utc"]),
-                    subreddit=question["subreddit"],
-                    selftext=question["selftext"],
-                    title=question["title"],
-                    body=answer["body"]
-                )
-                if tokenized_ans:
-                    split_to_file[question["split"]].write(
-                        "\t".join([
-                            tokenized_ans['subreddit'],
-                            tokenized_ans['date'],
-                            tokenized_ans['title'],
-                            tokenized_ans['selftext'],
-                            tokenized_ans['body']]
-                        ) + "\n"
+                if answer["id"] in anss_in_dataset:
+                    write_answer(
+                        question=question,
+                        answer=answer,
+                        file=split_to_file[question["split"]]
                     )
