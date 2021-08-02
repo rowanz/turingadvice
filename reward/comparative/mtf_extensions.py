@@ -188,7 +188,7 @@ class ScalarOutputUnitransformer(Unitransformer):
                 eos_rewards_long,
                 reduced_dim=length_dim
             )
-            return x
+            return eos_rewards
         else:
             raise ValueError(f"Unrecognized mode: {context.mode}")
 
