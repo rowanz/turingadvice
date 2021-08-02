@@ -108,7 +108,6 @@ class ScalarOutputUnitransformer(Unitransformer):
             else:
                 context.losses = [loss]
             return reward_pairs
-            return reward_pairs
         elif context.mode == tf.estimator.ModeKeys.PREDICT:
             assert context.length_dim.size == SEQUENCE_LENGTH["targets"]
             mesh = inputs.mesh
@@ -170,8 +169,8 @@ class ScalarOutputUnitransformer(Unitransformer):
                 name="reward_head"
             )
             # Squeeze out size 1 reward dimension
-            # squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "reward"])
-            # rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_reward_dim")
+            squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "reward"])
+            rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_reward_dim")
             # Keep reward only at EOS positions
             length_dim = get_dims_by_name(
                 tensor=context.sequence_id,
@@ -189,7 +188,7 @@ class ScalarOutputUnitransformer(Unitransformer):
                 eos_rewards_long,
                 reduced_dim=length_dim
             )
-            return eos_rewards
+            return x
         else:
             raise ValueError(f"Unrecognized mode: {context.mode}")
 

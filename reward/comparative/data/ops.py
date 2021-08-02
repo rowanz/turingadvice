@@ -10,9 +10,14 @@ _MONTHS = [
     'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
     'September', 'October', 'November', 'December'
 ]
+DATASET_IS_PACKED = False
 # Data file constants
 SPLITS = ["train", "val", "test"]
-TSV_PATH = os.path.join(os.path.dirname(__file__), "{split}_str.tsv")
+TSV_PATH = os.path.join(
+    os.path.dirname(__file__),
+    "{dataset_id}",
+    "{split}_str.tsv"
+)
 TSV_COLNAMES = ["inputs", "targets1", "targets2"]
 LOCAL_TFRECORDS_PATH = os.path.join(
     os.path.dirname(__file__),
