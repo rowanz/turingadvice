@@ -75,6 +75,7 @@ class ComparativeRewardModel(MtfModel):
 
   def finetune(
     self, dataset_id, finetune_steps, pretrained_model_dir,
+    tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
     if pretrained_checkpoint_step == -1:
@@ -83,6 +84,10 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
+      gin.bind_parameter(
+        "serialize_num_microbatches.tokens_per_microbatch_per_replica",
+        tokens_per_microbatch_per_replica
+      )
       # gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     self.train(

@@ -58,6 +58,11 @@ flags.DEFINE_integer(
     default=None,
     help="Batch size for SGD"
 )
+flags.DEFINE_integer(
+    name="tokens_per_microbatch_per_replica",
+    default=1280 * 2,
+    help="How many tokens of input can each model replica handle?"
+)
 flags.DEFINE_float(
     name="learning_rate",
     default=0.001,
@@ -87,7 +92,8 @@ def main(_):
         dataset_id=FLAGS.dataset_id,
         finetune_steps=FLAGS.num_train_steps,
         pretrained_model_dir=FLAGS.pretrained_model_dir,
-        pretrained_checkpoint_step=-1
+        pretrained_checkpoint_step=-1,
+        tokens_per_microbatch_per_replica=FLAGS.tokens_per_microbatch_per_replica
     )
 
 if __name__ == "__main__":
