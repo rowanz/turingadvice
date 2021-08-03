@@ -24,11 +24,6 @@ flags.DEFINE_string(
     help="Pretrained model dir."
 )
 flags.DEFINE_string(
-    name="model_size",
-    default="small",
-    help="Model size, must be in small, base, large, 3B, 11B"
-)
-flags.DEFINE_string(
     name="tpu_topology",
     default="2x2",
     help="https://github.com/google-research/text-to-text-transfer-transformer/issues/34"
