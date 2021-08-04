@@ -103,6 +103,7 @@ class ScalarOutputUnitransformer(Unitransformer):
                 reward_pairs,
                 ans_pair_dim=get_dims_by_name(reward_pairs, "ans_pair")[0]
             )
+            mtf.scalar_summary("silly_loss/", loss)
             if context.losses:
                 context.losses.append(loss)
             else:
