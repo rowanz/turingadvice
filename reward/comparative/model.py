@@ -49,27 +49,34 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, eval_checkpoint_step=None, eval_summary_dir=None, split="val"):
+  def eval(self, dataset_id, split="val", checkpoint_steps=None):
+    if checkpoint_steps is None:
+      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
+    checkpoint_path = next(iter(
+      utils.get_checkpoint_iterator(checkpoint_steps, self._model_dir)
+    ))
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
     sequence_length = deepcopy(self._sequence_length)
     sequence_length.update({"targets": sequence_length["targets"] * 2})
     # "I have no idea why but I think this must be needed?" - Rowan
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
-    estimator = self.estimator(vocabulary, eval_checkpoint_step, sequence_length)
-    eval_dataset = eval_dataset_fn(self._sequence_length, vocabulary, split)
+    estimator = self.estimator(vocabulary)
     def _input_fn(params):
       del params
-      return eval_dataset\
-        .dataset_fn()\
-        .repeat()\
-        .batch(self.batch_size, drop_remainder=True)\
-        .prefetch(tf.data.experimental.AUTOTUNE)
+      dataset = get_dataset(
+        dataset_id=dataset_id,
+        split=split,
+        from_local=False
+      )
+      dataset = dataset.repeat().batch(self.batch_size, drop_remainder=True)
+      dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+      return dataset
     metrics = estimator.evaluate(
       input_fn=_input_fn,
       steps=400, # Why this number?
-      checkpoint_path=None,
-      name=eval_dataset.name
+      checkpoint_path=checkpoint_path,
+      name=f"dataset_id: {dataset_id}, split: {split}"
     )
     print(metrics)
 
