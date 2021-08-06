@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from copy import deepcopy
 
 import gin
@@ -6,7 +7,7 @@ import tensorflow.compat.v1 as tf
 from mesh_tensorflow.transformer import utils
 import mesh_tensorflow.transformer as mtf_transformer
 
-from reward.comparative.data import get_dataset
+from reward.comparative.data import get_dataset, get_checkpoint_paths
 from reward.comparative.data.tsvs_to_tfrecords import SEQUENCE_LENGTH
 from reward.comparative.mtf_extensions import make_reward_bitransformer
 from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
@@ -49,12 +50,11 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, dataset_id, split="val", checkpoint_steps=None):
-    if checkpoint_steps is None:
-      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
-    checkpoint_path = next(iter(
-      utils.get_checkpoint_iterator(checkpoint_steps, self._model_dir)
-    ))
+  def eval(self, dataset_id, split="val", min_checkpoint_steps=None):
+    """
+    Evaluate model metrics on several checkpoints
+    """
+    ckpt_paths = get_checkpoint_paths(self._model_dir, min_checkpoint_steps)
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
     sequence_length = deepcopy(self._sequence_length)
     sequence_length.update({"targets": sequence_length["targets"] * 2})
@@ -72,13 +72,14 @@ class ComparativeRewardModel(MtfModel):
       dataset = dataset.repeat().batch(self.batch_size, drop_remainder=True)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
       return dataset
-    metrics = estimator.evaluate(
-      input_fn=_input_fn,
-      steps=1, # Why this number?
-      checkpoint_path=checkpoint_path,
-      name=f"dataset_id: {dataset_id}, split: {split}"
-    )
-    print(metrics)
+    for ckpt_path in tqdm(ckpt_paths):
+      metrics = estimator.evaluate(
+        input_fn=_input_fn,
+        steps=1, # Why this number?
+        checkpoint_path=ckpt_path,
+        name=f"dataset_id: {dataset_id}, split: {split}"
+      )
+      print(metrics)
 
   def finetune(
     self, dataset_id, finetune_steps, pretrained_model_dir,
