@@ -62,6 +62,8 @@ class ComparativeRewardModel(MtfModel):
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
     estimator = self.estimator(vocabulary, sequence_length=sequence_length)
+    # 
+    # Data input function for TPUEstimator
     def _input_fn(params):
       del params
       dataset = get_dataset(
@@ -72,10 +74,15 @@ class ComparativeRewardModel(MtfModel):
       dataset = dataset.batch(self.batch_size, drop_remainder=True)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
       return dataset
+    # Count steps in dataset
+    with tf.Session() as sess:
+      dataset = _input_fn(None)
+      steps_in_dataset = sess.run(dataset.reduce(0, lambda x,_: x + 1))
+    # Evaluate all checkpoints beyond min_checkpoint_steps
     for ckpt_path in tqdm(ckpt_paths):
       metrics = estimator.evaluate(
         input_fn=_input_fn,
-        steps=None, # evaluates until `input_fn` raises end-of-input exception
+        steps=steps_in_dataset,
         checkpoint_path=ckpt_path,
         name=split
       )
