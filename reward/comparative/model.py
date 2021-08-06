@@ -61,7 +61,7 @@ class ComparativeRewardModel(MtfModel):
     # "I have no idea why but I think this must be needed?" - Rowan
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
-    estimator = self.estimator(vocabulary)
+    estimator = self.estimator(vocabulary, sequence_length=sequence_length)
     def _input_fn(params):
       del params
       dataset = get_dataset(
