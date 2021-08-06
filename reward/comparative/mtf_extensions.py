@@ -579,7 +579,14 @@ def _tpu_estimator_model_fn(model_type,
       tf_loss = tf.cast(lowering.export_to_tf_tensor(loss), tf.float32)
       tf_loss = tf.cast(tf_loss, tf.float32)
       tf_rewards = tf.cast(lowering.export_to_tf_tensor(rewards), tf.float32)
-
+      tf_rewards = tf.squeeze(tf_rewards)
+      # Metrics expect answer pair dim to be at the end
+      assert len(tf_rewards.shape) == 2, \
+        f"Rewards tensor should be 2D, but is {len(tf_rewards.shape)}D"
+      if tf_rewards.shape.as_list()[0] == 2:
+        tf_rewards = tf.transpose(rewards)
+      else:
+        assert tf_rewards.shape.as_list()[1] == 2
       def simple_metrics(tf_rewards):
         """Validation metrics"""
         tf_diff_filter = tf.convert_to_tensor([-1, 1], dtype=tf_rewards.dtype)
