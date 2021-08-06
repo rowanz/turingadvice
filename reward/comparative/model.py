@@ -69,17 +69,17 @@ class ComparativeRewardModel(MtfModel):
         split=split,
         from_local=False
       )
-      dataset = dataset.repeat().batch(self.batch_size, drop_remainder=True)
+      dataset = dataset.batch(self.batch_size, drop_remainder=True)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
       return dataset
     for ckpt_path in tqdm(ckpt_paths):
       metrics = estimator.evaluate(
         input_fn=_input_fn,
-        steps=1, # Why this number?
+        steps=None, # evaluates until `input_fn` raises end-of-input exception
         checkpoint_path=ckpt_path,
-        name=f"dataset_id: {dataset_id}, split: {split}"
+        name=split
       )
-      print(metrics)
+      print(f"Metrics for ckpt '{ckpt_path}': {metrics}")
 
   def finetune(
     self, dataset_id, finetune_steps, pretrained_model_dir,
