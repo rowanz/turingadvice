@@ -6,7 +6,8 @@ import mesh_tensorflow
 
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH
-from reward.comparative.mtf_extensions import _tpu_estimator_model_fn
+from reward.comparative.mtf_extensions import \
+    make_reward_bitransformer, _tpu_estimator_model_fn
 
 flags.DEFINE_string(
     name="model_dir",
@@ -52,6 +53,9 @@ FLAGS = flags.FLAGS
 
 def main(_):
     assert FLAGS.model_size in ["small", "base", "large", "3B", "11B"]
+    # Monkey-patch Mesh-Tensorflow model instantiation
+    mesh_tensorflow.transformer.transformer.make_bitransformer = \
+        make_reward_bitransformer
     # Monkey-patch Mesh-Tensorflow TPUEstimator creation
     mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
         _tpu_estimator_model_fn
