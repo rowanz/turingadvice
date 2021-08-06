@@ -74,7 +74,7 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     metrics = estimator.evaluate(
       input_fn=_input_fn,
-      steps=400, # Why this number?
+      steps=1, # Why this number?
       checkpoint_path=checkpoint_path,
       name=f"dataset_id: {dataset_id}, split: {split}"
     )

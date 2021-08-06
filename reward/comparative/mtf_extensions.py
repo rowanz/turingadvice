@@ -574,26 +574,25 @@ def _tpu_estimator_model_fn(model_type,
               ])
     elif mode == tf.estimator.ModeKeys.EVAL:
       rewards, loss = logits_and_loss(mtf_features)
+      squeezed_shape = mtf.Shape([d for d in rewards.shape.dims if d.name != "outer_batch"])
+      rewards = mtf.reshape(rewards, squeezed_shape, name="squeeze_outer_batch_dim")
       rewards = mtf.anonymize(rewards) # or export_to_tf_tensor won't work
       lowering = mtf.Lowering(graph, {mesh: mesh_impl}, autostack=autostack)
       tf_loss = tf.cast(lowering.export_to_tf_tensor(loss), tf.float32)
       tf_loss = tf.cast(tf_loss, tf.float32)
       tf_rewards = tf.cast(lowering.export_to_tf_tensor(rewards), tf.float32)
-      tf_rewards = tf.squeeze(tf_rewards)
       # Metrics expect answer pair dim to be at the end
       assert len(tf_rewards.shape) == 2, \
         f"Rewards tensor should be 2D, but is {len(tf_rewards.shape)}D"
-      if tf_rewards.shape.as_list()[0] == 2:
-        tf_rewards = tf.transpose(rewards)
-      else:
-        assert tf_rewards.shape.as_list()[1] == 2
+      assert tf_rewards.shape.as_list()[0] == 2, \
+        "First dimension of rewards tensor should be for answer pairs"
       def simple_metrics(tf_rewards):
         """Validation metrics"""
-        tf_diff_filter = tf.convert_to_tensor([-1, 1], dtype=tf_rewards.dtype)
-        tf_reward_diff = tf.reduce_sum(tf_rewards * tf_diff_filter, axis=1)
+        tf_diff_filter = tf.convert_to_tensor([[-1], [1]], dtype=tf_rewards.dtype)
+        tf_reward_diff = tf.reduce_sum(tf_rewards * tf_diff_filter, axis=0)
         n_correct = tf.count_nonzero(tf_reward_diff > 0)
-        n = tf_rewards.shape.as_list()[0]
-        return {"ranking_accuracy": n_correct / n}
+        n = tf_rewards.shape.as_list()[1]
+        return {"ranking_accuracy": tf.metrics.mean(n_correct / n)}
       eval_metrics = (simple_metrics, [tf_rewards])
       with mtf.utils.outside_all_rewrites():
         restore_hook = mtf.MtfRestoreHook(lowering)
