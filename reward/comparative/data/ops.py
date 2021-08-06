@@ -100,25 +100,6 @@ def _stack_answer_pairs(sample, concat=True):
     }
     return stacked_sample
 
-def eval_dataset_fn(sequence_length, vocabulary, dataset_split):
-    if sequence_length != SEQUENCE_LENGTH:
-        raise ValueError("Requested unsupported `sequence_length`")
-    def ranking_accuracy(targets, predictions):
-        del targets
-        n = 0
-        n_correct = 0
-        for rewards in predictions:
-            n += 1
-            if rewards[1] > rewards[0]:
-                n_correct += 1
-        return n_correct / n
-    return transformer_dataset.EvalDataset(
-        "reward_pairs",
-        partial(get_dataset, split=dataset_split),
-        None,
-        [ranking_accuracy]
-    )
-
 from datetime import datetime
 from data.to_tfrecord_t5 import encoder, _trim_to_desired_length, _fix_reddit_text
 

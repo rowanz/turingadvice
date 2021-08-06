@@ -6,7 +6,7 @@ import tensorflow.compat.v1 as tf
 from mesh_tensorflow.transformer import utils
 import mesh_tensorflow.transformer as mtf_transformer
 
-from reward.comparative.data import get_dataset, eval_dataset_fn
+from reward.comparative.data import get_dataset
 from reward.comparative.data.tsvs_to_tfrecords import SEQUENCE_LENGTH
 from reward.comparative.mtf_extensions import make_reward_bitransformer
 from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
