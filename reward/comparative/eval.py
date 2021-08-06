@@ -6,7 +6,7 @@ import mesh_tensorflow
 
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH
-from reward.comparative.mtf_extensions import tpu_estimator_model_fn
+from reward.comparative.mtf_extensions import _tpu_estimator_model_fn
 
 flags.DEFINE_string(
     name="model_dir",
@@ -54,7 +54,7 @@ def main(_):
     assert FLAGS.model_size in ["small", "base", "large", "3B", "11B"]
     # Monkey-patch Mesh-Tensorflow TPUEstimator creation
     mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
-        tpu_estimator_model_fn
+        _tpu_estimator_model_fn
     # Initialize model
     model = ComparativeRewardModel(
         model_dir=FLAGS.model_dir,

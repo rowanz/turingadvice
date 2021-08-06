@@ -232,7 +232,7 @@ from mesh_tensorflow.transformer.utils import \
     get_variable_dtype, _dynamic_text2self, serialize_num_microbatches
 
 @gin.configurable
-def tpu_estimator_model_fn(model_type,
+def _tpu_estimator_model_fn(model_type,
                            transformer_model,
                            model_dir,
                            use_tpu,
