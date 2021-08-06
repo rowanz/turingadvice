@@ -78,6 +78,7 @@ class ComparativeRewardModel(MtfModel):
     with tf.Session() as sess:
       dataset = _input_fn(None)
       steps_in_dataset = sess.run(dataset.reduce(0, lambda x,_: x + 1))
+      steps_in_dataset = int(steps_in_dataset)
     # Evaluate all checkpoints beyond min_checkpoint_steps
     for ckpt_path in tqdm(ckpt_paths):
       metrics = estimator.evaluate(
