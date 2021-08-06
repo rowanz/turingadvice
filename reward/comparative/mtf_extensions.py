@@ -574,6 +574,7 @@ def _tpu_estimator_model_fn(model_type,
               ])
     elif mode == tf.estimator.ModeKeys.EVAL:
       rewards, loss = logits_and_loss(mtf_features)
+      rewards = mtf.anonymize(rewards) # or export_to_tf_tensor won't work
       lowering = mtf.Lowering(graph, {mesh: mesh_impl}, autostack=autostack)
       tf_loss = tf.cast(lowering.export_to_tf_tensor(loss), tf.float32)
       tf_loss = tf.cast(tf_loss, tf.float32)
