@@ -20,8 +20,8 @@ flags.DEFINE_string(
     help="Model size, must be in small, base, large, 3B, 11B."
 )
 flags.DEFINE_integer(
-    name="checkpoint_steps",
-    default=None,
+    name="min_checkpoint_steps",
+    default=-1,
     help="Steps in checkpoint to be evaluated."
 )
 flags.DEFINE_integer(
@@ -72,7 +72,7 @@ def main(_):
     model.eval(
         dataset_id=FLAGS.dataset_id,
         split=FLAGS.split,
-        checkpoint_steps=FLAGS.checkpoint_steps
+        min_checkpoint_steps=FLAGS.min_checkpoint_steps
     )
 
 if __name__ == "__main__":
