@@ -2,15 +2,13 @@ import os
 from absl import flags
 
 import tensorflow.compat.v1 as tf
+import mesh_tensorflow
 
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH
+from reward.comparative.mtf_extensions import \
+    make_reward_bitransformer, _tpu_estimator_model_fn
 
-flags.DEFINE_string(
-    name="split",
-    default="val",
-    help="Split to evaluate on."
-)
 flags.DEFINE_string(
     name="model_dir",
     default=None,
@@ -22,9 +20,19 @@ flags.DEFINE_string(
     help="Model size, must be in small, base, large, 3B, 11B."
 )
 flags.DEFINE_integer(
-    name="eval_checkpoint_step",
+    name="min_checkpoint_steps",
+    default=-1,
+    help="Steps in checkpoint to be evaluated."
+)
+flags.DEFINE_integer(
+    name="dataset_id",
     default=None,
-    help="Step in checkpoints to be evaluated."
+    help="Dataset id (to enable evaluating different datasets)"
+)
+flags.DEFINE_string(
+    name="split",
+    default="val",
+    help="Split to evaluate on."
 )
 flags.DEFINE_integer(
     name="iterations_per_loop",
@@ -36,28 +44,30 @@ flags.DEFINE_integer(
     default=8,
     help="Number of cores per model instance."
 )
-flags.DEFINE_integer(
-    name="batch_size",
-    default=None,
-    help="Evaluation batch size."
-)
 FLAGS = flags.FLAGS
 
 def main(_):
     assert FLAGS.model_size in ["small", "base", "large", "3B", "11B"]
+    # Monkey-patch Mesh-Tensorflow model instantiation
+    mesh_tensorflow.transformer.transformer.make_bitransformer = \
+        make_reward_bitransformer
+    # Monkey-patch Mesh-Tensorflow TPUEstimator creation
+    mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
+        _tpu_estimator_model_fn
+    # Initialize model
     model = ComparativeRewardModel(
         model_dir=FLAGS.model_dir,
         tpu=os.uname()[1],
         tpu_topology='2x2', # Must be this for validation
         model_parallelism=FLAGS.model_parallelism,
-        batch_size=FLAGS.batch_size,
+        batch_size=1, # To avoid dropping observations
         sequence_length=SEQUENCE_LENGTH,
         iterations_per_loop=FLAGS.iterations_per_loop,
     )
     model.eval(
-        eval_checkpoint_step=FLAGS.eval_checkpoint_step,
-        eval_summary_dir=None, # Use model_dir
-        split=FLAGS.split
+        dataset_id=FLAGS.dataset_id,
+        split=FLAGS.split,
+        min_checkpoint_steps=FLAGS.min_checkpoint_steps
     )
 
 if __name__ == "__main__":

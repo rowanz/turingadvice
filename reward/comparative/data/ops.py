@@ -1,5 +1,5 @@
 import os
-from functools import partial
+from warnings import warn
 
 import tensorflow as tf
 import mesh_tensorflow.transformer.dataset as transformer_dataset
@@ -100,24 +100,29 @@ def _stack_answer_pairs(sample, concat=True):
     }
     return stacked_sample
 
-def eval_dataset_fn(sequence_length, vocabulary, dataset_split):
-    if sequence_length != SEQUENCE_LENGTH:
-        raise ValueError("Requested unsupported `sequence_length`")
-    def ranking_accuracy(targets, predictions):
-        del targets
-        n = 0
-        n_correct = 0
-        for rewards in predictions:
-            n += 1
-            if rewards[1] > rewards[0]:
-                n_correct += 1
-        return n_correct / n
-    return transformer_dataset.EvalDataset(
-        "reward_pairs",
-        partial(get_dataset, split=dataset_split),
-        None,
-        [ranking_accuracy]
-    )
+def get_checkpoint_paths(base_dir, min_steps=-1):
+    """
+    Args:
+    base_dir: str
+        Directory where we'll look for checkpoints
+    min_steps: int
+        Ignore checkpoints with less than these many steps
+    
+    Returns:
+    ckpt_paths: [str]
+        List of absolute checkpoint paths
+    """
+    index_paths = tf.io.gfile.glob(f"{base_dir}/model.ckpt-[0-9]*.index")
+    ckpt_paths = [p.replace(".index", "") for p in index_paths]
+    filtered_ckpt_paths = []
+    for ckpt_path in ckpt_paths:
+        try:
+            ckpts_steps = int(ckpt_path.split("-")[-1])
+            if ckpts_steps >= min_steps:
+                filtered_ckpt_paths.append(ckpt_path)
+        except:
+            warn(f"Ignoring unparseable checkpoint path: {ckpt_path}")
+    return filtered_ckpt_paths
 
 from datetime import datetime
 from data.to_tfrecord_t5 import encoder, _trim_to_desired_length, _fix_reddit_text

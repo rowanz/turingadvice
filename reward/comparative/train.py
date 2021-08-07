@@ -8,25 +8,18 @@ from reward.comparative.mtf_extensions import make_reward_bitransformer
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH
 
+OUTPUT_MODEL_DIR = "gs://seri2021-advice/turingadvice/reward/comparative/checkpoints/{model_size}/{dataset_id}/"
+PRETRAINED_MODEL_DIR = "gs://seri2021-advice/turingadvice/baselines/t5/{model_size}/"
+
 flags.DEFINE_integer(
     name="dataset_id",
     default=None,
     help="Dataset id (to enable training with different datasets)"
 )
 flags.DEFINE_string(
-    name="model_dir",
-    default=None,
-    help="Output model_dir for TPUEstimator"
-)
-flags.DEFINE_string(
-    name="pretrained_model_dir",
-    default=None,
-    help="Pretrained model dir."
-)
-flags.DEFINE_string(
     name="model_size",
-    default="small",
-    help="Model size, must be in small, base, large, 3B, 11B"
+    default=None,
+    help="T5 size to be finetuned. Must be in [small, base, large, 3B, 11B]"
 )
 flags.DEFINE_string(
     name="tpu_topology",
@@ -36,7 +29,7 @@ flags.DEFINE_string(
 flags.DEFINE_integer(
     name="save_checkpoints_steps",
     default=1000,
-    help="How often to save the model checkpoint"
+    help="How often to save a model checkpoint"
 )
 flags.DEFINE_integer(
     name="iterations_per_loop",
@@ -51,12 +44,17 @@ flags.DEFINE_integer(
 flags.DEFINE_integer(
     name="num_train_steps",
     default=10000,
-    help="num train steps"
+    help="Total number of training steps to perform"
 )
 flags.DEFINE_integer(
     name="train_batch_size",
     default=None,
     help="Batch size for SGD"
+)
+flags.DEFINE_integer(
+    name="tokens_per_microbatch_per_replica",
+    default=1280 * 2,
+    help="How many tokens of input can each model replica handle?"
 )
 flags.DEFINE_float(
     name="learning_rate",
@@ -70,8 +68,11 @@ def main(_):
     mesh_tensorflow.transformer.transformer.make_bitransformer = \
         make_reward_bitransformer
     # Initialize model
+    dir_params = {"dataset_id": FLAGS.dataset_id, "model_size": FLAGS.model_size}
+    output_model_dir = OUTPUT_MODEL_DIR.format(**dir_params)
+    pretrained_model_dir = PRETRAINED_MODEL_DIR.format(**dir_params)
     model = ComparativeRewardModel(
-        model_dir=FLAGS.model_dir,
+        model_dir=output_model_dir,
         tpu=os.uname()[1],
         tpu_topology=FLAGS.tpu_topology,
         model_parallelism=FLAGS.model_parallelism,
@@ -86,8 +87,9 @@ def main(_):
     model.finetune(
         dataset_id=FLAGS.dataset_id,
         finetune_steps=FLAGS.num_train_steps,
-        pretrained_model_dir=FLAGS.pretrained_model_dir,
-        pretrained_checkpoint_step=-1
+        pretrained_model_dir=pretrained_model_dir,
+        pretrained_checkpoint_step=-1,
+        tokens_per_microbatch_per_replica=FLAGS.tokens_per_microbatch_per_replica
     )
 
 if __name__ == "__main__":

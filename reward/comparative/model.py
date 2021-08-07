@@ -1,4 +1,5 @@
 import os
+from tqdm import tqdm
 from copy import deepcopy
 
 import gin
@@ -6,7 +7,7 @@ import tensorflow.compat.v1 as tf
 from mesh_tensorflow.transformer import utils
 import mesh_tensorflow.transformer as mtf_transformer
 
-from reward.comparative.data import get_dataset, eval_dataset_fn
+from reward.comparative.data import get_dataset, get_checkpoint_paths
 from reward.comparative.data.tsvs_to_tfrecords import SEQUENCE_LENGTH
 from reward.comparative.mtf_extensions import make_reward_bitransformer
 from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
@@ -49,32 +50,48 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, eval_checkpoint_step=None, eval_summary_dir=None, split="val"):
+  def eval(self, dataset_id, split="val", min_checkpoint_steps=None):
+    """
+    Evaluate model metrics on several checkpoints
+    """
+    ckpt_paths = get_checkpoint_paths(self._model_dir, min_checkpoint_steps)
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
     sequence_length = deepcopy(self._sequence_length)
     sequence_length.update({"targets": sequence_length["targets"] * 2})
     # "I have no idea why but I think this must be needed?" - Rowan
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
-    estimator = self.estimator(vocabulary, eval_checkpoint_step, sequence_length)
-    eval_dataset = eval_dataset_fn(self._sequence_length, vocabulary, split)
+    estimator = self.estimator(vocabulary, sequence_length=sequence_length)
+    # 
+    # Data input function for TPUEstimator
     def _input_fn(params):
       del params
-      return eval_dataset\
-        .dataset_fn()\
-        .repeat()\
-        .batch(self.batch_size, drop_remainder=True)\
-        .prefetch(tf.data.experimental.AUTOTUNE)
-    metrics = estimator.evaluate(
-      input_fn=_input_fn,
-      steps=400, # Why this number?
-      checkpoint_path=None,
-      name=eval_dataset.name
-    )
-    print(metrics)
+      dataset = get_dataset(
+        dataset_id=dataset_id,
+        split=split,
+        from_local=False
+      )
+      dataset = dataset.batch(self.batch_size, drop_remainder=True)
+      dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+      return dataset
+    # Count steps in dataset
+    with tf.Session() as sess:
+      dataset = _input_fn(None)
+      steps_in_dataset = sess.run(dataset.reduce(0, lambda x,_: x + 1))
+      steps_in_dataset = int(steps_in_dataset)
+    # Evaluate all checkpoints beyond min_checkpoint_steps
+    for ckpt_path in tqdm(ckpt_paths):
+      metrics = estimator.evaluate(
+        input_fn=_input_fn,
+        steps=steps_in_dataset,
+        checkpoint_path=ckpt_path,
+        name=split
+      )
+      print(f"Metrics for ckpt '{ckpt_path}': {metrics}")
 
   def finetune(
     self, dataset_id, finetune_steps, pretrained_model_dir,
+    tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
     if pretrained_checkpoint_step == -1:
@@ -83,6 +100,10 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
+      gin.bind_parameter(
+        "serialize_num_microbatches.tokens_per_microbatch_per_replica",
+        tokens_per_microbatch_per_replica
+      )
       # gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     self.train(
