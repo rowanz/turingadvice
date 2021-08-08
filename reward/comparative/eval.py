@@ -14,11 +14,6 @@ flags.DEFINE_string(
     default=None,
     help="Output model_dir for TPUEstimator."
 )
-flags.DEFINE_string(
-    name="model_size",
-    default="small",
-    help="Model size, must be in small, base, large, 3B, 11B."
-)
 flags.DEFINE_integer(
     name="min_checkpoint_steps",
     default=-1,
@@ -47,7 +42,6 @@ flags.DEFINE_integer(
 FLAGS = flags.FLAGS
 
 def main(_):
-    assert FLAGS.model_size in ["small", "base", "large", "3B", "11B"]
     # Monkey-patch Mesh-Tensorflow model instantiation
     mesh_tensorflow.transformer.transformer.make_bitransformer = \
         make_reward_bitransformer

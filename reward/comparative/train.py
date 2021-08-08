@@ -1,5 +1,7 @@
 import os
+import json
 
+from time import time
 from absl import flags
 import mesh_tensorflow
 import tensorflow.compat.v1 as tf
@@ -8,7 +10,8 @@ from reward.comparative.mtf_extensions import make_reward_bitransformer
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH
 
-OUTPUT_MODEL_DIR = "gs://seri2021-advice/turingadvice/reward/comparative/checkpoints/{model_size}/{dataset_id}/"
+OUTPUT_MODEL_DIR = "gs://seri2021-advice/turingadvice/reward/comparative/checkpoints/{model_size}/{model_id}/"
+PARAMS_OUT_PATH = os.path.join(OUTPUT_MODEL_DIR, "params.json")
 PRETRAINED_MODEL_DIR = "gs://seri2021-advice/turingadvice/baselines/t5/{model_size}/"
 
 flags.DEFINE_integer(
@@ -67,8 +70,23 @@ def main(_):
     # Monkey-patch Mesh-Tensorflow model instantiation
     mesh_tensorflow.transformer.transformer.make_bitransformer = \
         make_reward_bitransformer
+    # Store training parameters
+    model_id = int(time())
+    dir_params = {"model_size": FLAGS.model_size, "model_id": model_id}
+    params_out_path = PARAMS_OUT_PATH.format(**dir_params)
+    params = {
+        "model_size": FLAGS.model_size,
+        "dataset_id": FLAGS.dataset_id,
+        "learning_rate": FLAGS.learning_rate,
+        "num_train_steps": FLAGS.num_train_steps,
+        "train_batch_size": FLAGS.train_batch_size,
+        "tokens_per_microbatch_per_replica": FLAGS.tokens_per_microbatch_per_replica,
+        "iterations_per_loop": FLAGS.iterations_per_loop,
+        "save_checkpoints_steps": FLAGS.save_checkpoints_steps
+    }
+    with tf.io.gfile.GFile(params_out_path, mode="w") as params_file:
+        json.dump(params, params_file, indent=2)
     # Initialize model
-    dir_params = {"dataset_id": FLAGS.dataset_id, "model_size": FLAGS.model_size}
     output_model_dir = OUTPUT_MODEL_DIR.format(**dir_params)
     pretrained_model_dir = PRETRAINED_MODEL_DIR.format(**dir_params)
     model = ComparativeRewardModel(
