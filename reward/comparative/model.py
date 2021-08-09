@@ -40,7 +40,10 @@ class ComparativeRewardModel(MtfModel):
       dataset = get_dataset(
         dataset_id=dataset_id,
         split="train",
-        from_local=False
+        from_local=False,
+        from_tfrecords=False,
+        stack_answer_pairs=True,
+        shuffle_buffer_size=1000
       )
       dataset = dataset.repeat().batch(
           self.batch_size * (self._ensemble_inputs or 1),
@@ -69,7 +72,10 @@ class ComparativeRewardModel(MtfModel):
       dataset = get_dataset(
         dataset_id=dataset_id,
         split=split,
-        from_local=False
+        from_local=False,
+        from_tfrecords=False,
+        stack_answer_pairs=True,
+        shuffle_buffer_size=-1
       )
       dataset = dataset.batch(self.batch_size, drop_remainder=True)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)

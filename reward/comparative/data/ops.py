@@ -2,7 +2,10 @@ import os
 from warnings import warn
 
 import tensorflow as tf
-import mesh_tensorflow.transformer.dataset as transformer_dataset
+from mesh_tensorflow.transformer.dataset import trim_and_pad_dataset
+
+from t5.data.utils import _SHUFFLE_BUFFER_SIZE, encode_string_features
+from data.to_tfrecord_t5 import encoder as TOKENIZER
 
 SELFTEXT_DESIRED_LEN = 1250
 SEQUENCE_LENGTH = {"inputs": 1280, "targets": 512}
@@ -13,8 +16,13 @@ _MONTHS = [
 DATASET_IS_PACKED = False
 # Data file constants
 SPLITS = ["train", "val", "test"]
-TSV_PATH = os.path.join(
+LOCAL_TSV_PATH = os.path.join(
     os.path.dirname(__file__),
+    "{dataset_id}",
+    "{split}_str.tsv"
+)
+GCS_TSV_PATH = os.path.join(
+    "gs://seri2021-advice/turingadvice/reward/comparative/data/",
     "{dataset_id}",
     "{split}_str.tsv"
 )
@@ -26,64 +34,129 @@ LOCAL_TFRECORDS_PATH = os.path.join(
 )
 GCS_TFRECORDS_PATH = "gs://seri2021-advice/turingadvice/reward/comparative/data/{dataset_id}/{split}.tfrecords"
 
-def get_dataset(dataset_id, split, from_local=False):
-    if from_local:
-        tfrecords_path = LOCAL_TFRECORDS_PATH.format(split=split, dataset_id=dataset_id)
-    else:
-        tfrecords_path = GCS_TFRECORDS_PATH.format(split=split, dataset_id=dataset_id)
-    serialized_dataset = tf.data.TFRecordDataset(tfrecords_path)
-    feature_description = {
-        "inputs": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["inputs"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["inputs"]
-        ),
-        "inputs_position": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["inputs"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["inputs"]
-        ),
-        "targets1": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets"]
-        ),
-        "targets1_position": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets"]
-        ),
-        "targets2": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets"]
-        ),
-        "targets2_position": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets"]
-        ),
-        "inputs_segmentation": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["inputs"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["inputs"]
-        ),
-        "targets1_segmentation": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets"]
-        ),
-        "targets2_segmentation": tf.io.FixedLenFeature(
-            SEQUENCE_LENGTH["targets"],
-            tf.int64,
-            default_value=[0]*SEQUENCE_LENGTH["targets"]
+def get_dataset(
+    dataset_id, split, from_local=False, from_tfrecords=False,
+    stack_answer_pairs=True, shuffle_buffer_size=10000
+    ):
+    dir_params = {"split": split, "dataset_id": dataset_id}
+    if from_tfrecords:
+        assert stack_answer_pairs, "Unstacked answer pairs unavailable when from_tfrecords=True"
+        if from_local:
+            tfrecords_path = LOCAL_TFRECORDS_PATH.format(**dir_params)
+        else:
+            tfrecords_path = GCS_TFRECORDS_PATH.format(**dir_params)
+        serialized_dataset = tf.data.TFRecordDataset(tfrecords_path)
+        feature_description = {
+            "inputs": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["inputs"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["inputs"]
+            ),
+            "inputs_position": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["inputs"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["inputs"]
+            ),
+            "targets1": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["targets"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["targets"]
+            ),
+            "targets1_position": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["targets"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["targets"]
+            ),
+            "targets2": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["targets"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["targets"]
+            ),
+            "targets2_position": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["targets"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["targets"]
+            ),
+            "inputs_segmentation": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["inputs"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["inputs"]
+            ),
+            "targets1_segmentation": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["targets"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["targets"]
+            ),
+            "targets2_segmentation": tf.io.FixedLenFeature(
+                SEQUENCE_LENGTH["targets"],
+                tf.int64,
+                default_value=[0]*SEQUENCE_LENGTH["targets"]
+            )
+        }
+        padded_dataset = serialized_dataset.map(
+            lambda x: tf.io.parse_single_example(x, feature_description)
         )
-    }
-    tokens_dataset = serialized_dataset.map(
-        lambda x: tf.io.parse_single_example(x, feature_description)
-    )
-    stacked_dataset = tokens_dataset.map(_stack_answer_pairs)
-    return stacked_dataset
+        unshuffled_dataset = padded_dataset.map(_stack_answer_pairs)
+    else:
+        if from_local:
+            tsv_path = LOCAL_TSV_PATH.format(**dir_params)
+        else:
+            tsv_path = GCS_TSV_PATH.format(**dir_params)
+        tsv_dataset = tf.data.experimental.CsvDataset(
+            tsv_path,
+            record_defaults=["", "", ""],
+            field_delim="\t",
+            use_quote_delim=False
+        )
+        tsv_dataset = tsv_dataset.map(
+            lambda *x: {c: x[i] for i, c in enumerate(TSV_COLNAMES)}
+        )
+        tokens_dataset = encode_string_features(
+            dataset=tsv_dataset,
+            vocabulary=TOKENIZER,   
+            copy_plaintext=False,
+            keys=TSV_COLNAMES
+        )
+        unpadded_dataset = tokens_dataset.map(_add_position_and_segmentation)
+        SEQUENCE_LENGTH.update({
+            "targets1": SEQUENCE_LENGTH["targets"],
+            "targets2": SEQUENCE_LENGTH["targets"],
+        })
+        _sequence_length = {
+            **SEQUENCE_LENGTH,
+            **{k + "_position": v for k, v in SEQUENCE_LENGTH.items()},
+            **{k + "_segmentation": v for k, v in SEQUENCE_LENGTH.items()}
+        }
+        padded_dataset = trim_and_pad_dataset(
+            dataset=unpadded_dataset,
+            length=_sequence_length
+        )
+        if stack_answer_pairs:
+            unshuffled_dataset = padded_dataset.map(_stack_answer_pairs)
+        else:
+            unshuffled_dataset = padded_dataset
+    # Shuffle dataset
+    if shuffle_buffer_size > 0:
+        shuffled_dataset = unshuffled_dataset.shuffle(
+            buffer_size = shuffle_buffer_size,
+            seed = 41
+        )
+        return shuffled_dataset
+    else:
+        return unshuffled_dataset
+
+def _add_position_and_segmentation(sample):
+    """
+    These tensors are generated by mtf.transformer.dataset.pack_or_pad with
+    pack=True. We're not supporting packing, so we have to add them manually
+    for mtf transformers to work.
+    """
+    new_items = {}
+    for k, v in sample.items():
+        new_items[k + "_segmentation"] = (v * 0) + 1
+        new_items[k + "_position"] = tf.range(len(v))
+    sample.update(new_items)
+    return sample
 
 def _stack_answer_pairs(sample, concat=True):
     stack_fn = tf.concat if concat else tf.stack

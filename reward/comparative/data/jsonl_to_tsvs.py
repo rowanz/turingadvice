@@ -8,7 +8,7 @@ from datetime import datetime
 
 from data.assertions import question_is_valid, answer_is_valid, answer_pair_is_valid
 from data.to_tfrecord_t5 import encoder, _trim_to_desired_length, _fix_reddit_text
-from reward.comparative.data import SELFTEXT_DESIRED_LEN, TSV_PATH
+from reward.comparative.data import SELFTEXT_DESIRED_LEN, LOCAL_TSV_PATH
 
 PARAMS_OUT_PATH = os.path.join(os.path.dirname(__file__), "{dataset_id}/params.json")
 
@@ -93,9 +93,9 @@ if __name__ == "__main__":
         json.dump(params, params_f, indent=2)
     # Process answer pairs
     with open(FLAGS.jsonl_path, "r") as jsonl_file,\
-        open(TSV_PATH.format(dataset_id=dataset_id, split="train"), "w") as train_anss_f,\
-        open(TSV_PATH.format(dataset_id=dataset_id, split="val"), "w") as val_anss_f,\
-        open(TSV_PATH.format(dataset_id=dataset_id, split="test"), "w") as test_anss_f:
+        open(LOCAL_TSV_PATH.format(dataset_id=dataset_id, split="train"), "w") as train_anss_f,\
+        open(LOCAL_TSV_PATH.format(dataset_id=dataset_id, split="val"), "w") as val_anss_f,\
+        open(LOCAL_TSV_PATH.format(dataset_id=dataset_id, split="test"), "w") as test_anss_f:
         split_to_file = {
             "train": train_anss_f,
             "val": val_anss_f,
