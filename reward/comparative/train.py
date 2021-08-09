@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 
 from time import time
@@ -14,69 +15,77 @@ OUTPUT_MODEL_DIR = "gs://{bucket_name}/turingadvice/reward/comparative/checkpoin
 PARAMS_OUT_PATH = os.path.join(OUTPUT_MODEL_DIR, "params.json")
 PRETRAINED_MODEL_DIR = "gs://{bucket_name}/turingadvice/baselines/t5/{model_size}/"
 
-flags.DEFINE_string(
-    name="bucket_name",
-    default="seri2021-advice",
-    help="Root path of a GCS bucket for data and checkpoints"
-)
-flags.DEFINE_integer(
-    name="dataset_id",
-    default=None,
-    help="Dataset id (to enable training with different datasets)"
-)
-flags.DEFINE_string(
-    name="model_size",
-    default=None,
-    help="T5 size to be finetuned. Must be in [small, base, large, 3B, 11B]"
-)
-flags.DEFINE_string(
-    name="tpu_topology",
-    default="2x2",
-    help="https://github.com/google-research/text-to-text-transfer-transformer/issues/34"
-)
-flags.DEFINE_integer(
-    name="save_checkpoints_steps",
-    default=1000,
-    help="How often to save a model checkpoint"
-)
-flags.DEFINE_integer(
-    name="iterations_per_loop",
-    default=1000,
-    help="How many steps to make in each estimator call"
-)
-flags.DEFINE_integer(
-    name="model_parallelism",
-    default=1,
-    help="Number of cores per model instance"
-)
-flags.DEFINE_integer(
-    name="num_train_steps",
-    default=10000,
-    help="Total number of training steps to perform"
-)
-flags.DEFINE_integer(
-    name="train_batch_size",
-    default=None,
-    help="Batch size for SGD"
-)
-flags.DEFINE_integer(
-    name="tokens_per_microbatch_per_replica",
-    default=1280 * 2,
-    help="How many tokens of input can each model replica handle?"
-)
-flags.DEFINE_float(
-    name="learning_rate",
-    default=0.001,
-    help="The initial learning rate for adafactor"
-)
-FLAGS = flags.FLAGS
+def _define_flags():
+    flags.DEFINE_string(
+        name="model_id",
+        default=None,
+        help="Id of the trained model. Will use timestamp if unspecified"
+    )
+    flags.DEFINE_string(
+        name="bucket_name",
+        default="seri2021-advice",
+        help="Root path of a GCS bucket for data and checkpoints"
+    )
+    flags.DEFINE_integer(
+        name="dataset_id",
+        default=None,
+        help="Dataset id (to enable training with different datasets)"
+    )
+    flags.DEFINE_string(
+        name="model_size",
+        default=None,
+        help="T5 size to be finetuned. Must be in [small, base, large, 3B, 11B]"
+    )
+    flags.DEFINE_string(
+        name="tpu_topology",
+        default="2x2",
+        help="https://github.com/google-research/text-to-text-transfer-transformer/issues/34"
+    )
+    flags.DEFINE_integer(
+        name="save_checkpoints_steps",
+        default=1000,
+        help="How often to save a model checkpoint"
+    )
+    flags.DEFINE_integer(
+        name="iterations_per_loop",
+        default=1000,
+        help="How many steps to make in each estimator call"
+    )
+    flags.DEFINE_integer(
+        name="model_parallelism",
+        default=1,
+        help="Number of cores per model instance"
+    )
+    flags.DEFINE_integer(
+        name="num_train_steps",
+        default=10000,
+        help="Total number of training steps to perform"
+    )
+    flags.DEFINE_integer(
+        name="train_batch_size",
+        default=None,
+        help="Batch size for SGD"
+    )
+    flags.DEFINE_integer(
+        name="tokens_per_microbatch_per_replica",
+        default=1280 * 2,
+        help="How many tokens of input can each model replica handle?"
+    )
+    flags.DEFINE_float(
+        name="learning_rate",
+        default=0.001,
+        help="The initial learning rate for adafactor"
+    )
+    return flags.FLAGS
 
 def main(_):
+    FLAGS = _define_flags()
+    FLAGS(sys.argv)
     # Monkey-patch Mesh-Tensorflow model instantiation
     mesh_tensorflow.transformer.transformer.make_bitransformer = \
         make_reward_bitransformer
     # Store training parameters
-    model_id = int(time())
+    model_id = FLAGS.model_id or int(time())
     dir_params = {
         "bucket_name": FLAGS.bucket_name,
         "model_size": FLAGS.model_size,
