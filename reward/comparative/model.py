@@ -8,7 +8,6 @@ from mesh_tensorflow.transformer import utils
 import mesh_tensorflow.transformer as mtf_transformer
 
 from reward.comparative.data import get_dataset, get_checkpoint_paths
-from reward.comparative.data.tsvs_to_tfrecords import SEQUENCE_LENGTH
 from reward.comparative.mtf_extensions import make_reward_bitransformer
 from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
 from t5.models.mtf_model import \
@@ -17,7 +16,7 @@ from t5.models.mtf_model import \
 REDDIT_TASK_NAME = "reddit_v002"
 
 class ComparativeRewardModel(MtfModel):
-  def train(self, dataset_id, steps, init_checkpoint=None):
+  def train(self, bucket_name, dataset_id, steps, init_checkpoint=None):
     """
     This method is a combination of MtfModel.train and
     mtf.transformer.utils.train_model, which MtfModel.train calls. It was
@@ -38,9 +37,13 @@ class ComparativeRewardModel(MtfModel):
     def input_fn(params):
       del params
       dataset = get_dataset(
+        bucket_name=bucket_name,
         dataset_id=dataset_id,
         split="train",
-        from_local=False
+        from_local=False,
+        from_tfrecords=False,
+        stack_answer_pairs=True,
+        shuffle_buffer_size=1000
       )
       dataset = dataset.repeat().batch(
           self.batch_size * (self._ensemble_inputs or 1),
@@ -50,7 +53,10 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, dataset_id, split="val", min_checkpoint_steps=None):
+  def eval(
+    self, bucket_name, dataset_id, split="val",
+    min_checkpoint_steps=None
+    ):
     """
     Evaluate model metrics on several checkpoints
     """
@@ -67,9 +73,13 @@ class ComparativeRewardModel(MtfModel):
     def _input_fn(params):
       del params
       dataset = get_dataset(
+        bucket_name=bucket_name,
         dataset_id=dataset_id,
         split=split,
-        from_local=False
+        from_local=False,
+        from_tfrecords=False,
+        stack_answer_pairs=True,
+        shuffle_buffer_size=-1
       )
       dataset = dataset.batch(self.batch_size, drop_remainder=True)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
@@ -90,7 +100,7 @@ class ComparativeRewardModel(MtfModel):
       print(f"Metrics for ckpt '{ckpt_path}': {metrics}")
 
   def finetune(
-    self, dataset_id, finetune_steps, pretrained_model_dir,
+    self, bucket_name, dataset_id, finetune_steps, pretrained_model_dir,
     tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
@@ -107,6 +117,7 @@ class ComparativeRewardModel(MtfModel):
       # gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     self.train(
+      bucket_name=bucket_name,
       dataset_id=dataset_id,
       steps=checkpoint_step + finetune_steps,
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)

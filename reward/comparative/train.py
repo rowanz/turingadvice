@@ -10,10 +10,15 @@ from reward.comparative.mtf_extensions import make_reward_bitransformer
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH
 
-OUTPUT_MODEL_DIR = "gs://seri2021-advice/turingadvice/reward/comparative/checkpoints/{model_size}/{model_id}/"
+OUTPUT_MODEL_DIR = "gs://{bucket_name}/turingadvice/reward/comparative/checkpoints/{model_size}/{model_id}"
 PARAMS_OUT_PATH = os.path.join(OUTPUT_MODEL_DIR, "params.json")
-PRETRAINED_MODEL_DIR = "gs://seri2021-advice/turingadvice/baselines/t5/{model_size}/"
+PRETRAINED_MODEL_DIR = "gs://{bucket_name}/turingadvice/baselines/t5/{model_size}/"
 
+flags.DEFINE_string(
+    name="bucket_name",
+    default="seri2021-advice",
+    help="Root path of a GCS bucket for data and checkpoints"
+)
 flags.DEFINE_integer(
     name="dataset_id",
     default=None,
@@ -72,7 +77,11 @@ def main(_):
         make_reward_bitransformer
     # Store training parameters
     model_id = int(time())
-    dir_params = {"model_size": FLAGS.model_size, "model_id": model_id}
+    dir_params = {
+        "bucket_name": FLAGS.bucket_name,
+        "model_size": FLAGS.model_size,
+        "model_id": model_id
+    }
     params_out_path = PARAMS_OUT_PATH.format(**dir_params)
     params = {
         "model_size": FLAGS.model_size,
@@ -103,6 +112,7 @@ def main(_):
     )
     # Train
     model.finetune(
+        bucket_name=FLAGS.bucket_name,
         dataset_id=FLAGS.dataset_id,
         finetune_steps=FLAGS.num_train_steps,
         pretrained_model_dir=pretrained_model_dir,
