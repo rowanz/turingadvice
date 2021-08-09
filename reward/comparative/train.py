@@ -16,7 +16,7 @@ PRETRAINED_MODEL_DIR = "gs://{bucket_name}/turingadvice/baselines/t5/{model_size
 
 flags.DEFINE_string(
     name="bucket_name",
-    default="gs://seri2021-advice",
+    default="seri2021-advice",
     help="Root path of a GCS bucket for data and checkpoints"
 )
 flags.DEFINE_integer(

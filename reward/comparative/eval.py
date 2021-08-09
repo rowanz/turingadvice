@@ -21,7 +21,7 @@ flags.DEFINE_integer(
 )
 flags.DEFINE_string(
     name="bucket_name",
-    default="gs://seri2021-advice",
+    default="seri2021-advice",
     help="Root path of a GCS bucket for data and checkpoints"
 )
 flags.DEFINE_integer(
