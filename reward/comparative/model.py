@@ -17,7 +17,7 @@ from t5.models.mtf_model import \
 REDDIT_TASK_NAME = "reddit_v002"
 
 class ComparativeRewardModel(MtfModel):
-  def train(self, dataset_id, steps, init_checkpoint=None):
+  def train(self, bucket_uri, dataset_id, steps, init_checkpoint=None):
     """
     This method is a combination of MtfModel.train and
     mtf.transformer.utils.train_model, which MtfModel.train calls. It was
@@ -38,6 +38,7 @@ class ComparativeRewardModel(MtfModel):
     def input_fn(params):
       del params
       dataset = get_dataset(
+        bucket_uri=bucket_uri,
         dataset_id=dataset_id,
         split="train",
         from_local=False,
@@ -53,7 +54,10 @@ class ComparativeRewardModel(MtfModel):
       return dataset
     estimator.train(input_fn=input_fn, max_steps=steps)
 
-  def eval(self, dataset_id, split="val", min_checkpoint_steps=None):
+  def eval(
+    self, bucket_uri, dataset_id, split="val",
+    min_checkpoint_steps=None
+    ):
     """
     Evaluate model metrics on several checkpoints
     """
@@ -70,6 +74,7 @@ class ComparativeRewardModel(MtfModel):
     def _input_fn(params):
       del params
       dataset = get_dataset(
+        bucket_uri=bucket_uri,
         dataset_id=dataset_id,
         split=split,
         from_local=False,
@@ -96,7 +101,7 @@ class ComparativeRewardModel(MtfModel):
       print(f"Metrics for ckpt '{ckpt_path}': {metrics}")
 
   def finetune(
-    self, dataset_id, finetune_steps, pretrained_model_dir,
+    self, bucket_uri, dataset_id, finetune_steps, pretrained_model_dir,
     tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
@@ -113,6 +118,7 @@ class ComparativeRewardModel(MtfModel):
       # gin.bind_parameter("tpu_estimator_model_fn.tpu_summaries", True)
     model_ckpt = "model.ckpt-" + str(checkpoint_step)
     self.train(
+      bucket_uri=bucket_uri,
       dataset_id=dataset_id,
       steps=checkpoint_step + finetune_steps,
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
