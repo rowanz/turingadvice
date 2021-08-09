@@ -4,15 +4,22 @@ import json
 from time import time
 from tqdm import tqdm
 from absl import flags
+from random import choice
 from datetime import datetime
+from contextlib import ExitStack
 
 from data.assertions import question_is_valid, answer_is_valid, answer_pair_is_valid
 from data.to_tfrecord_t5 import encoder, _trim_to_desired_length, _fix_reddit_text
-from reward.comparative.data import SELFTEXT_DESIRED_LEN, LOCAL_TSV_PATH
+from reward.comparative.data import SELFTEXT_DESIRED_LEN, LOCAL_TSV_PATH, SPLITS
 
 PARAMS_OUT_PATH = os.path.join(os.path.dirname(__file__), "{dataset_id}/params.json")
 
 def _define_flags():
+    flags.DEFINE_string(
+        name="dataset_id",
+        default=None,
+        help="Id of the resulting dataset. Will use timestamp if unspecified"
+    )
     flags.DEFINE_string(
         name="jsonl_path",
         default="data/redditadvice2019.jsonl",
@@ -32,6 +39,11 @@ def _define_flags():
         name="min_score_ratio",
         default=None,
         help="Minimum score ratio between highest and lowest scoring answers in pair"
+    )
+    flags.DEFINE_integer(
+        name="n_datasets",
+        default=1,
+        help="Build n independent datasets"
     )
     return flags.FLAGS
 
@@ -83,27 +95,39 @@ def to_tsv_line(question, ans1, ans2):
 if __name__ == "__main__":
     FLAGS = _define_flags()
     FLAGS(sys.argv)
-    # Create directory to store result dataset
-    dataset_id = int(time())
-    out_dir = os.path.dirname(PARAMS_OUT_PATH.format(dataset_id=dataset_id))
-    os.makedirs(out_dir, exist_ok=False)
-    # Store preprocessing configuration (flags)
-    with open(PARAMS_OUT_PATH.format(dataset_id=dataset_id), "w") as params_f:
-        params = {k: v.value for k, v in FLAGS._flags().items()}
-        json.dump(params, params_f, indent=2)
-    # Process answer pairs
-    with open(FLAGS.jsonl_path, "r") as jsonl_file,\
-        open(LOCAL_TSV_PATH.format(dataset_id=dataset_id, split="train"), "w") as train_anss_f,\
-        open(LOCAL_TSV_PATH.format(dataset_id=dataset_id, split="val"), "w") as val_anss_f,\
-        open(LOCAL_TSV_PATH.format(dataset_id=dataset_id, split="test"), "w") as test_anss_f:
-        split_to_file = {
-            "train": train_anss_f,
-            "val": val_anss_f,
-            "test": test_anss_f
-        }
+    # Assign dataset ids
+    if FLAGS.n_datasets > 1:
+        id_base = FLAGS.dataset_id or int(time())
+        dataset_ids = [f"{id_base}-{i + 1}" for i in range(FLAGS.n_datasets)]
+    else:
+        dataset_ids = [FLAGS.dataset_id or int(time())]
+    # Create dataset directories and store parameters
+    for dataset_id in dataset_ids:
+        out_dir = os.path.dirname(PARAMS_OUT_PATH.format(dataset_id=dataset_id))
+        os.makedirs(out_dir, exist_ok=False)
+        with open(PARAMS_OUT_PATH.format(dataset_id=dataset_id), "w") as params_f:
+            params = {k: v.value for k, v in FLAGS._flags().items()}
+            json.dump(params, params_f, indent=2)
+    with open(FLAGS.jsonl_path, "r") as jsonl_file, ExitStack() as stack:
+        # Open all dataset files at the same time
+        dataset_files = {
+            dataset_id: {
+                split: stack.enter_context(open(
+                    LOCAL_TSV_PATH.format(dataset_id=dataset_id, split=split),
+                    "w"
+                ))
+                for split in SPLITS
+            }
+            for dataset_id in dataset_ids
+        } # dataset_files["id"]["train"] := train split file of dataset "id"
+        # Randomly place the questions into the n datasets
         for line in tqdm(jsonl_file):
             question = json.loads(line)
-            if not question_is_valid(question):
+            if question_is_valid(question):
+                # Which dataset will we store this question in?
+                dataset_id = choice(dataset_ids)
+                out_file = dataset_files[dataset_id][question["split"]]
+            else:
                 continue
             for ans1_idx, ans1 in enumerate(question["good_comments"]):
                 if not answer_is_valid(ans1):
@@ -119,5 +143,4 @@ if __name__ == "__main__":
                         min_score_ratio=FLAGS.min_score_ratio
                         ):
                         dataset_line = to_tsv_line(question, ans1, ans2)
-                        split_file = split_to_file[question["split"]]
-                        split_file.write(dataset_line + "\n")
+                        out_file.write(dataset_line + "\n")
