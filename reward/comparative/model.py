@@ -23,7 +23,7 @@ class ComparativeRewardModel(MtfModel):
     re-written to fit our tfrecords dataset, which is already tokenized.
 
     Args:
-    dataset_id: int
+    dataset_id: str
       Dataset id. See reward/comparative/ops.py
     steps: int
       Number of training steps.

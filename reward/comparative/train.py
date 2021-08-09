@@ -26,7 +26,7 @@ def _define_flags():
         default="seri2021-advice",
         help="Root path of a GCS bucket for data and checkpoints"
     )
-    flags.DEFINE_integer(
+    flags.DEFINE_string(
         name="dataset_id",
         default=None,
         help="Dataset id (to enable training with different datasets)"
