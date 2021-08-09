@@ -20,26 +20,20 @@ LOCAL_TSV_PATH = os.path.join(
     os.path.dirname(__file__),
     "{dataset_id}/{split}_str.tsv"
 )
-GCS_TSV_PATH = os.path.join(
-    "{bucket_uri}"
-    "turingadvice/reward/comparative/data/{dataset_id}/{split}_str.tsv"
-)
+GCS_TSV_PATH = "gs://{bucket_name}/turingadvice/reward/comparative/data/{dataset_id}/{split}_str.tsv"
 TSV_COLNAMES = ["inputs", "targets1", "targets2"]
 LOCAL_TFRECORDS_PATH = os.path.join(
     os.path.dirname(__file__),
     "{dataset_id}/{split}.tfrecords"
 )
-GCS_TFRECORDS_PATH = os.path.join(
-    "{bucket_uri}",
-    "turingadvice/reward/comparative/data/{dataset_id}/{split}.tfrecords"
-)
+GCS_TFRECORDS_PATH = "gs://{bucket_name}/turingadvice/reward/comparative/data/{dataset_id}/{split}.tfrecords"
 
 def get_dataset(
-    bucket_uri, dataset_id, split, from_local=False, from_tfrecords=False,
+    bucket_name, dataset_id, split, from_local=False, from_tfrecords=False,
     stack_answer_pairs=True, shuffle_buffer_size=10000
     ):
     dir_params = {
-        "bucket_uri": bucket_uri,
+        "bucket_name": bucket_name,
         "split": split,
         "dataset_id":dataset_id
     }

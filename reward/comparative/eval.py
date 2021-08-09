@@ -20,7 +20,7 @@ flags.DEFINE_integer(
     help="Steps in checkpoint to be evaluated."
 )
 flags.DEFINE_string(
-    name="bucket_uri",
+    name="bucket_name",
     default="gs://seri2021-advice",
     help="Root path of a GCS bucket for data and checkpoints"
 )
@@ -64,7 +64,7 @@ def main(_):
         iterations_per_loop=FLAGS.iterations_per_loop,
     )
     model.eval(
-        bucket_uri=FLAGS.bucket_uri,
+        bucket_name=FLAGS.bucket_name,
         dataset_id=FLAGS.dataset_id,
         split=FLAGS.split,
         min_checkpoint_steps=FLAGS.min_checkpoint_steps
