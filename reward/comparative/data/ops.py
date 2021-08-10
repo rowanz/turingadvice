@@ -27,6 +27,7 @@ LOCAL_TFRECORDS_PATH = os.path.join(
     "{dataset_id}/{split}.tfrecords"
 )
 GCS_TFRECORDS_PATH = "gs://{bucket_name}/turingadvice/reward/comparative/data/{dataset_id}/{split}.tfrecords"
+MODEL_DIR = "gs://{bucket_name}/turingadvice/reward/comparative/checkpoints/{model_size}/{model_id}"
 
 def get_dataset(
     bucket_name, dataset_id, split, from_local=False, from_tfrecords=False,

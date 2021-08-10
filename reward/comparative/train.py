@@ -9,10 +9,9 @@ import tensorflow.compat.v1 as tf
 
 from reward.comparative.mtf_extensions import make_reward_bitransformer
 from reward.comparative.model import ComparativeRewardModel
-from reward.comparative.data import SEQUENCE_LENGTH
+from reward.comparative.data import SEQUENCE_LENGTH, MODEL_DIR
 
-OUTPUT_MODEL_DIR = "gs://{bucket_name}/turingadvice/reward/comparative/checkpoints/{model_size}/{model_id}"
-PARAMS_OUT_PATH = os.path.join(OUTPUT_MODEL_DIR, "params.json")
+PARAMS_OUT_PATH = os.path.join(MODEL_DIR, "params.json")
 PRETRAINED_MODEL_DIR = "gs://{bucket_name}/turingadvice/baselines/t5/{model_size}/"
 
 def _define_flags():
@@ -105,7 +104,7 @@ def main(_):
     with tf.io.gfile.GFile(params_out_path, mode="w") as params_file:
         json.dump(params, params_file, indent=2)
     # Initialize model
-    output_model_dir = OUTPUT_MODEL_DIR.format(**dir_params)
+    output_model_dir = MODEL_DIR.format(**dir_params)
     pretrained_model_dir = PRETRAINED_MODEL_DIR.format(**dir_params)
     model = ComparativeRewardModel(
         model_dir=output_model_dir,

@@ -5,22 +5,22 @@ import tensorflow.compat.v1 as tf
 import mesh_tensorflow
 
 from reward.comparative.model import ComparativeRewardModel
-from reward.comparative.data import SEQUENCE_LENGTH
+from reward.comparative.data import SEQUENCE_LENGTH, MODEL_DIR
 from reward.comparative.mtf_extensions import \
     make_reward_bitransformer, _tpu_estimator_model_fn
 
 flags.DEFINE_string(
-    name="model_dir",
-    default=None,
-    help="Output model_dir for TPUEstimator."
-)
-flags.DEFINE_integer(
-    name="min_checkpoint_steps",
-    default=-1,
-    help="Steps in checkpoint to be evaluated."
+    name="bucket_name",
+    default="seri2021-advice",
+    help="Root path of a GCS bucket for data and checkpoints"
 )
 flags.DEFINE_string(
-    name="bucket_name",
+    name="model_size",
+    default="seri2021-advice",
+    help="Root path of a GCS bucket for data and checkpoints"
+)
+flags.DEFINE_string(
+    name="model_id",
     default="seri2021-advice",
     help="Root path of a GCS bucket for data and checkpoints"
 )
@@ -28,6 +28,11 @@ flags.DEFINE_string(
     name="dataset_id",
     default=None,
     help="Dataset id (to enable evaluating different datasets)"
+)
+flags.DEFINE_integer(
+    name="min_checkpoint_steps",
+    default=-1,
+    help="Steps in checkpoint to be evaluated."
 )
 flags.DEFINE_string(
     name="split",
@@ -54,8 +59,13 @@ def main(_):
     mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
         _tpu_estimator_model_fn
     # Initialize model
+    model_dir = MODEL_DIR.format(
+        bucket_name=FLAGS.bucket_name,
+        model_size=FLAGS.model_size,
+        model_id=FLAGS.model_id
+    )
     model = ComparativeRewardModel(
-        model_dir=FLAGS.model_dir,
+        model_dir=model_dir,
         tpu=os.uname()[1],
         tpu_topology='2x2', # Must be this for validation
         model_parallelism=FLAGS.model_parallelism,
