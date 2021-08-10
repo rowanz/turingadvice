@@ -1,21 +1,33 @@
 import os
+from reward.comparative.data.ops import SEQUENCE_LENGTH
 from tqdm import tqdm
 from copy import deepcopy
 
 import gin
 import tensorflow.compat.v1 as tf
+import mesh_tensorflow
 from mesh_tensorflow.transformer import utils
-import mesh_tensorflow.transformer as mtf_transformer
 
-from reward.comparative.data import get_dataset, get_checkpoint_paths
-from reward.comparative.mtf_extensions import make_reward_bitransformer
 from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
 from t5.models.mtf_model import \
   MtfModel, _get_latest_checkpoint_from_dir, _operative_config_path
+from reward.comparative.data import \
+  get_dataset, get_prediction_dataset, get_checkpoint_paths
+from reward.comparative.mtf_extensions import \
+  make_reward_bitransformer, _tpu_estimator_model_fn
 
 REDDIT_TASK_NAME = "reddit_v002"
 
 class ComparativeRewardModel(MtfModel):
+  def __init__(self, *args, **kwargs):
+    # Monkey-patch Mesh-Tensorflow model instantiation
+    mesh_tensorflow.transformer.transformer.make_bitransformer = \
+        make_reward_bitransformer
+    # Monkey-patch Mesh-Tensorflow TPUEstimator creation
+    mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
+        _tpu_estimator_model_fn
+    super(ComparativeRewardModel, self).__init__(*args, **kwargs)
+
   def train(self, bucket_name, dataset_id, steps, init_checkpoint=None):
     """
     This method is a combination of MtfModel.train and
@@ -123,35 +135,28 @@ class ComparativeRewardModel(MtfModel):
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
     )
   
-  def predict(self, input_file, output_file, checkpoint_steps=-1):
-    raise NotImplementedError
-
-  def predict_one(
-    self, question, checkpoint_steps=-1
-    ):
+  def predict_from_file(self, input_file, checkpoint_steps=-1):
     """
-    Estimate reward for a single question.
     Args:
-    question: dict
-      A dictionary with keys "subreddit", "date", "title", "selftext",
-      "created_utc"
-    checkpoint_steps: int
-      Use model at this checkpoint.
+    input_file: str
+      Path to a tab-separated text file with columns [inputs, targets]
     """
-    mtf_transformer.make_bitransformer = make_reward_bitransformer
     if checkpoint_steps == -1:
       checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
     vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
-    str_inputs = utils.get_inputs_from_file(input_file)
-    
-
-  def export(
-    self, export_dir=None, checkpoint_step=-1,
-    sentencepiece_model_path=DEFAULT_SPM_PATH
-    ):
-    raise NotImplementedError
+    estimator = self.estimator(vocabulary, sequence_length=SEQUENCE_LENGTH)
+    def _input_fn(params):
+      del params
+      dataset = get_prediction_dataset(input_file)
+      dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+      return dataset
+    predictions = estimator.predict(
+      input_fn=_input_fn,
+      checkpoint_path=f"{self._model_dir}/model.ckpt-{checkpoint_steps}"
+    )
+    return predictions
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """

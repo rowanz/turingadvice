@@ -22,6 +22,7 @@ LOCAL_TSV_PATH = os.path.join(
 )
 GCS_TSV_PATH = "gs://{bucket_name}/turingadvice/reward/comparative/data/{dataset_id}/{split}_str.tsv"
 TSV_COLNAMES = ["inputs", "targets1", "targets2"]
+PREDICTION_TSV_COLNAMES = ["inputs", "targets"]
 LOCAL_TFRECORDS_PATH = os.path.join(
     os.path.dirname(__file__),
     "{dataset_id}/{split}.tfrecords"
@@ -143,6 +144,34 @@ def get_dataset(
         return shuffled_dataset
     else:
         return unshuffled_dataset
+
+def get_prediction_dataset(tsv_path):
+    tsv_dataset = tf.data.experimental.CsvDataset(
+        tsv_path,
+        record_defaults=["" for _ in PREDICTION_TSV_COLNAMES],
+        field_delim="\t",
+        use_quote_delim=False
+    )
+    tsv_dataset = tsv_dataset.map(
+        lambda *x: {c: x[i] for i, c in enumerate(PREDICTION_TSV_COLNAMES)}
+    )
+    tokens_dataset = encode_string_features(
+        dataset=tsv_dataset,
+        vocabulary=TOKENIZER,   
+        copy_plaintext=False,
+        keys=TSV_COLNAMES
+    )
+    unpadded_dataset = tokens_dataset.map(_add_position_and_segmentation)
+    _sequence_length = {
+        **SEQUENCE_LENGTH,
+        **{k + "_position": v for k, v in SEQUENCE_LENGTH.items()},
+        **{k + "_segmentation": v for k, v in SEQUENCE_LENGTH.items()}
+    }
+    padded_dataset = trim_and_pad_dataset(
+        dataset=unpadded_dataset,
+        length=_sequence_length
+    )
+    return padded_dataset
 
 def _add_position_and_segmentation(sample):
     """
