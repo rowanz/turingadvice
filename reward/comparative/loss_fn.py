@@ -28,4 +28,4 @@ def comparative_paired_rewards_loss(paired_rewards, ans_pair_dim):
         shape=[ans_pair_dim]
     )
     diff = mtf.reduce_sum(paired_rewards * diff_filter, reduced_dim=ans_pair_dim)
-    return mtf.reduce_sum(-mtf.log(mtf.sigmoid(diff)))
+    return mtf.reduce_mean(-mtf.log(mtf.sigmoid(diff)))
