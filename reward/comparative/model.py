@@ -136,36 +136,6 @@ class ComparativeRewardModel(MtfModel):
       steps=checkpoint_step + finetune_steps,
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
     )
-  
-  def predict(self, input_file, output_file, checkpoint_steps=-1):
-    raise NotImplementedError
-
-  def predict_one(
-    self, question, checkpoint_steps=-1
-    ):
-    """
-    Estimate reward for a single question.
-    Args:
-    question: dict
-      A dictionary with keys "subreddit", "date", "title", "selftext",
-      "created_utc"
-    checkpoint_steps: int
-      Use model at this checkpoint.
-    """
-    mtf_transformer.make_bitransformer = make_reward_bitransformer
-    if checkpoint_steps == -1:
-      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
-    with gin.unlock_config():
-      gin.parse_config_file(_operative_config_path(self._model_dir))
-    vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
-    str_inputs = utils.get_inputs_from_file(input_file)
-    
-
-  def export(
-    self, export_dir=None, checkpoint_step=-1,
-    sentencepiece_model_path=DEFAULT_SPM_PATH
-    ):
-    raise NotImplementedError
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """
