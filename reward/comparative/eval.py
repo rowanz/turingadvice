@@ -49,6 +49,11 @@ flags.DEFINE_integer(
     default=8,
     help="Number of cores per model instance."
 )
+flags.DEFINE_integer(
+    name="batch_size",
+    default=1,
+    help="Batch size. Spillover samples are ignored"
+)
 FLAGS = flags.FLAGS
 
 def main(_):
@@ -69,7 +74,7 @@ def main(_):
         tpu=os.uname()[1],
         tpu_topology='2x2', # Must be this for validation
         model_parallelism=FLAGS.model_parallelism,
-        batch_size=1, # To avoid dropping observations
+        batch_size=FLAGS.batch_size,
         sequence_length=SEQUENCE_LENGTH,
         iterations_per_loop=FLAGS.iterations_per_loop,
     )
