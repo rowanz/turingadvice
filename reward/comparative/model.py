@@ -124,7 +124,7 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
-      gin.bind_parameter("dropout_rate", dropout_rate)
+      gin.constant("dropout_rate", dropout_rate)
       gin.bind_parameter(
         "serialize_num_microbatches.tokens_per_microbatch_per_replica",
         tokens_per_microbatch_per_replica
