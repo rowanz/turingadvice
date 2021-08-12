@@ -80,9 +80,6 @@ def _define_flags():
 def main(_):
     FLAGS = _define_flags()
     FLAGS(sys.argv)
-    # Monkey-patch Mesh-Tensorflow model instantiation
-    mesh_tensorflow.transformer.transformer.make_bitransformer = \
-        make_reward_bitransformer
     # Store training parameters
     model_id = FLAGS.model_id or int(time())
     dir_params = {

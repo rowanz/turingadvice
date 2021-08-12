@@ -62,12 +62,6 @@ flags.DEFINE_integer(
 FLAGS = flags.FLAGS
 
 def main(_):
-    # Monkey-patch Mesh-Tensorflow model instantiation
-    mesh_tensorflow.transformer.transformer.make_bitransformer = \
-        make_reward_bitransformer
-    # Monkey-patch Mesh-Tensorflow TPUEstimator creation
-    mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
-        _tpu_estimator_model_fn
     # Initialize model
     model_dir = MODEL_DIR.format(
         bucket_name=FLAGS.bucket_name,

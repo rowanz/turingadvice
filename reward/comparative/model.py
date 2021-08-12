@@ -16,6 +16,15 @@ from t5.models.mtf_model import \
 REDDIT_TASK_NAME = "reddit_v002"
 
 class ComparativeRewardModel(MtfModel):
+  def __init__(self, *args, **kwargs):
+    # Monkey-patch Mesh-Tensorflow model instantiation
+    mesh_tensorflow.transformer.transformer.make_bitransformer = \
+        make_reward_bitransformer
+    # Monkey-patch Mesh-Tensorflow TPUEstimator creation
+    mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
+        _tpu_estimator_model_fn
+    super(ComparativeRewardModel, self).__init__(*args, **kwargs)
+
   def train(self, bucket_name, dataset_id, steps, init_checkpoint=None):
     """
     This method is a combination of MtfModel.train and
