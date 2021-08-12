@@ -4,8 +4,8 @@ from copy import deepcopy
 
 import gin
 import tensorflow.compat.v1 as tf
+import mesh_tensorflow
 from mesh_tensorflow.transformer import utils
-import mesh_tensorflow.transformer as mtf_transformer
 
 from reward.comparative.data import get_dataset, get_checkpoint_paths
 from reward.comparative.mtf_extensions import make_reward_bitransformer
