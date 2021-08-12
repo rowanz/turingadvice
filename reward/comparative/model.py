@@ -8,8 +8,9 @@ import mesh_tensorflow
 from mesh_tensorflow.transformer import utils
 
 from reward.comparative.data import get_dataset, get_checkpoint_paths
-from reward.comparative.mtf_extensions import make_reward_bitransformer
-from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
+from reward.comparative.mtf_extensions import\
+  make_reward_bitransformer, _tpu_estimator_model_fn
+from t5.data import get_mixture_or_task
 from t5.models.mtf_model import \
   MtfModel, _get_latest_checkpoint_from_dir, _operative_config_path
 
