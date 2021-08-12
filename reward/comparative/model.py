@@ -114,7 +114,7 @@ class ComparativeRewardModel(MtfModel):
 
   def finetune(
     self, bucket_name, dataset_id, finetune_steps, pretrained_model_dir,
-    tokens_per_microbatch_per_replica=None,
+    dropout_rate=0.1, tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
     if pretrained_checkpoint_step == -1:
@@ -123,6 +123,7 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
+      gin.bind_parameter("dropout_rate", dropout_rate)
       gin.bind_parameter(
         "serialize_num_microbatches.tokens_per_microbatch_per_replica",
         tokens_per_microbatch_per_replica
