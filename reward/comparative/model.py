@@ -54,8 +54,8 @@ class ComparativeRewardModel(MtfModel):
     estimator.train(input_fn=input_fn, max_steps=steps)
 
   def eval(
-    self, bucket_name, dataset_id, split="val",
-    min_checkpoint_steps=None
+    self, bucket_name, dataset_id, split="val", min_checkpoint_steps=None,
+    tokens_per_microbatch_per_replica=None
     ):
     """
     Evaluate model metrics on several checkpoints
@@ -67,6 +67,10 @@ class ComparativeRewardModel(MtfModel):
     # "I have no idea why but I think this must be needed?" - Rowan
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
+      gin.bind_parameter(
+        "serialize_num_microbatches.tokens_per_microbatch_per_replica",
+        tokens_per_microbatch_per_replica
+      )
     estimator = self.estimator(vocabulary, sequence_length=sequence_length)
     # 
     # Data input function for TPUEstimator

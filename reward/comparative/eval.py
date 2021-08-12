@@ -54,6 +54,11 @@ flags.DEFINE_integer(
     default=1,
     help="Batch size. Spillover samples are ignored"
 )
+flags.DEFINE_integer(
+    name="tokens_per_microbatch_per_replica",
+    default=1280 * 2,
+    help="How many tokens of input can each model replica handle?"
+)
 FLAGS = flags.FLAGS
 
 def main(_):
@@ -82,7 +87,8 @@ def main(_):
         bucket_name=FLAGS.bucket_name,
         dataset_id=FLAGS.dataset_id,
         split=FLAGS.split,
-        min_checkpoint_steps=FLAGS.min_checkpoint_steps
+        min_checkpoint_steps=FLAGS.min_checkpoint_steps,
+        tokens_per_microbatch_per_replica=FLAGS.tokens_per_microbatch_per_replica
     )
 
 if __name__ == "__main__":
