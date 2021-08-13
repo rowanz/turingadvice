@@ -4,18 +4,28 @@ from copy import deepcopy
 
 import gin
 import tensorflow.compat.v1 as tf
+import mesh_tensorflow
 from mesh_tensorflow.transformer import utils
-import mesh_tensorflow.transformer as mtf_transformer
 
 from reward.comparative.data import get_dataset, get_checkpoint_paths
-from reward.comparative.mtf_extensions import make_reward_bitransformer
-from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
+from reward.comparative.mtf_extensions import\
+  make_reward_bitransformer, _tpu_estimator_model_fn
+from t5.data import get_mixture_or_task
 from t5.models.mtf_model import \
   MtfModel, _get_latest_checkpoint_from_dir, _operative_config_path
 
 REDDIT_TASK_NAME = "reddit_v002"
 
 class ComparativeRewardModel(MtfModel):
+  def __init__(self, *args, **kwargs):
+    # Monkey-patch Mesh-Tensorflow model instantiation
+    mesh_tensorflow.transformer.transformer.make_bitransformer = \
+        make_reward_bitransformer
+    # Monkey-patch Mesh-Tensorflow TPUEstimator creation
+    mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
+        _tpu_estimator_model_fn
+    super(ComparativeRewardModel, self).__init__(*args, **kwargs)
+
   def train(self, bucket_name, dataset_id, steps, init_checkpoint=None):
     """
     This method is a combination of MtfModel.train and
@@ -105,7 +115,7 @@ class ComparativeRewardModel(MtfModel):
 
   def finetune(
     self, bucket_name, dataset_id, finetune_steps, pretrained_model_dir,
-    tokens_per_microbatch_per_replica=None,
+    dropout_rate=0.1, tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
     if pretrained_checkpoint_step == -1:
@@ -114,6 +124,7 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
+      gin.bind_parameter("%dropout_rate", dropout_rate)
       gin.bind_parameter(
         "serialize_num_microbatches.tokens_per_microbatch_per_replica",
         tokens_per_microbatch_per_replica
@@ -126,36 +137,6 @@ class ComparativeRewardModel(MtfModel):
       steps=checkpoint_step + finetune_steps,
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
     )
-  
-  def predict(self, input_file, output_file, checkpoint_steps=-1):
-    raise NotImplementedError
-
-  def predict_one(
-    self, question, checkpoint_steps=-1
-    ):
-    """
-    Estimate reward for a single question.
-    Args:
-    question: dict
-      A dictionary with keys "subreddit", "date", "title", "selftext",
-      "created_utc"
-    checkpoint_steps: int
-      Use model at this checkpoint.
-    """
-    mtf_transformer.make_bitransformer = make_reward_bitransformer
-    if checkpoint_steps == -1:
-      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
-    with gin.unlock_config():
-      gin.parse_config_file(_operative_config_path(self._model_dir))
-    vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
-    str_inputs = utils.get_inputs_from_file(input_file)
-    
-
-  def export(
-    self, export_dir=None, checkpoint_step=-1,
-    sentencepiece_model_path=DEFAULT_SPM_PATH
-    ):
-    raise NotImplementedError
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """

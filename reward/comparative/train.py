@@ -4,10 +4,8 @@ import json
 
 from time import time
 from absl import flags
-import mesh_tensorflow
 import tensorflow.compat.v1 as tf
 
-from reward.comparative.mtf_extensions import make_reward_bitransformer
 from reward.comparative.model import ComparativeRewardModel
 from reward.comparative.data import SEQUENCE_LENGTH, MODEL_DIR
 
@@ -75,14 +73,16 @@ def _define_flags():
         default=0.001,
         help="The initial learning rate for adafactor"
     )
+    flags.DEFINE_float(
+        name="dropout_rate",
+        default=0.1,
+        help="Dropout rate for all layers"
+    )
     return flags.FLAGS
 
 def main(_):
     FLAGS = _define_flags()
     FLAGS(sys.argv)
-    # Monkey-patch Mesh-Tensorflow model instantiation
-    mesh_tensorflow.transformer.transformer.make_bitransformer = \
-        make_reward_bitransformer
     # Store training parameters
     model_id = FLAGS.model_id or int(time())
     dir_params = {
@@ -95,6 +95,7 @@ def main(_):
         "model_size": FLAGS.model_size,
         "dataset_id": FLAGS.dataset_id,
         "learning_rate": FLAGS.learning_rate,
+        "dropout_rate": FLAGS.dropout_rate,
         "num_train_steps": FLAGS.num_train_steps,
         "train_batch_size": FLAGS.train_batch_size,
         "tokens_per_microbatch_per_replica": FLAGS.tokens_per_microbatch_per_replica,
@@ -125,6 +126,7 @@ def main(_):
         finetune_steps=FLAGS.num_train_steps,
         pretrained_model_dir=pretrained_model_dir,
         pretrained_checkpoint_step=-1,
+        dropout_rate=FLAGS.dropout_rate,
         tokens_per_microbatch_per_replica=FLAGS.tokens_per_microbatch_per_replica
     )
 
