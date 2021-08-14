@@ -141,7 +141,10 @@ def main(_):
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         keep_checkpoint_max=None,
         iterations_per_loop=FLAGS.iterations_per_loop,
-        variable_filter=_get_variable_filter(FLAGS.freeze_encoder)
+        variable_filter=_get_variable_filter(
+            FLAGS.freeze_encoder,
+            FLAGS.freeze_first_n_layers
+        )
     )
     # Train
     model.finetune(
