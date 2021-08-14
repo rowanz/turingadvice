@@ -119,6 +119,8 @@ def main(_):
         "dataset_id": FLAGS.dataset_id,
         "learning_rate": FLAGS.learning_rate,
         "dropout_rate": FLAGS.dropout_rate,
+        "freeze_encoder": FLAGS.freeze_encoder,
+        "freeze_first_n_layers": FLAGS.freeze_first_n_layers,
         "num_train_steps": FLAGS.num_train_steps,
         "train_batch_size": FLAGS.train_batch_size,
         "tokens_per_microbatch_per_replica": FLAGS.tokens_per_microbatch_per_replica,
