@@ -78,7 +78,19 @@ def _define_flags():
         default=0.1,
         help="Dropout rate for all layers"
     )
+    flags.DEFINE_boolean(
+        name="freeze_encoder",
+        default=False,
+        help="Freeze encoder (only train decoder)"
+    )
     return flags.FLAGS
+
+def _get_variable_filter(freeze_encoder):
+    if freeze_encoder:
+        def variable_filter(mtf_variable):
+            return "encoder" not in mtf_variable.name
+    else:
+        return None
 
 def main(_):
     FLAGS = _define_flags()
@@ -117,7 +129,8 @@ def main(_):
         learning_rate_schedule=FLAGS.learning_rate,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
         keep_checkpoint_max=None,
-        iterations_per_loop=FLAGS.iterations_per_loop
+        iterations_per_loop=FLAGS.iterations_per_loop,
+        variable_filter=_get_variable_filter(FLAGS.freeze_encoder)
     )
     # Train
     model.finetune(
