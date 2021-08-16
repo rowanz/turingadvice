@@ -158,6 +158,7 @@ class ComparativeRewardModel(MtfModel):
     def _input_fn(params):
       del params
       dataset = get_prediction_dataset(input_path)
+      dataset = dataset.batch(self.batch_size, drop_remainder=True)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
       return dataset
     predictions_iter = estimator.predict(

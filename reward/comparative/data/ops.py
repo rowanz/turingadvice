@@ -159,7 +159,7 @@ def get_prediction_dataset(tsv_path):
         dataset=tsv_dataset,
         vocabulary=TOKENIZER,   
         copy_plaintext=False,
-        keys=TSV_COLNAMES
+        keys=PREDICTION_TSV_COLNAMES
     )
     unpadded_dataset = tokens_dataset.map(_add_position_and_segmentation)
     _sequence_length = {
