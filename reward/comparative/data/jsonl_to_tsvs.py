@@ -12,7 +12,7 @@ from data.assertions import question_is_valid, answer_is_valid, answer_pair_is_v
 from data.to_tfrecord_t5 import encoder, _trim_to_desired_length, _fix_reddit_text
 from reward.comparative.data import SELFTEXT_DESIRED_LEN, LOCAL_TSV_PATH, SPLITS
 
-PARAMS_OUT_PATH = os.path.join(os.path.dirname(__file__), "{dataset_id}/params.json")
+META_OUT_PATH = os.path.join(os.path.dirname(LOCAL_TSV_PATH), "meta.json")
 
 def _define_flags():
     flags.DEFINE_string(
@@ -103,11 +103,10 @@ if __name__ == "__main__":
         dataset_ids = [FLAGS.dataset_id or int(time())]
     # Create dataset directories and store parameters
     for dataset_id in dataset_ids:
-        out_dir = os.path.dirname(PARAMS_OUT_PATH.format(dataset_id=dataset_id))
+        out_dir = os.path.dirname(META_OUT_PATH.format(dataset_id=dataset_id))
         os.makedirs(out_dir, exist_ok=False)
-        with open(PARAMS_OUT_PATH.format(dataset_id=dataset_id), "w") as params_f:
-            params = {k: v.value for k, v in FLAGS._flags().items()}
-            json.dump(params, params_f, indent=2)
+    n_questions = {dataset_id: 0 for dataset_id in dataset_ids}
+    n_ans_pairs = {dataset_id: 0 for dataset_id in dataset_ids}
     with open(FLAGS.jsonl_path, "r") as jsonl_file, ExitStack() as stack:
         # Open all dataset files at the same time
         dataset_files = {
@@ -123,6 +122,7 @@ if __name__ == "__main__":
         # Randomly place the questions into the n datasets
         for line in tqdm(jsonl_file):
             question = json.loads(line)
+            question_counted = False
             if question_is_valid(question):
                 # Which dataset will we store this question in?
                 dataset_id = choice(dataset_ids)
@@ -144,3 +144,21 @@ if __name__ == "__main__":
                         ):
                         dataset_line = to_tsv_line(question, ans1, ans2)
                         out_file.write(dataset_line + "\n")
+                        n_ans_pairs[dataset_id] += 1
+                        if not question_counted:
+                            n_questions[dataset_id] += 1
+                            question_counted = True
+    # Write dataset metadata
+    for dataset_id in dataset_ids:
+        with open(META_OUT_PATH.format(dataset_id=dataset_id), "w") as meta_f:
+            metadata = {
+                "dataset_id": dataset_id,
+                "n_datasets": FLAGS.n_datasets,
+                "jsonl_path": FLAGS.jsonl_path,
+                "max_time_diff": FLAGS.max_time_diff,
+                "max_len_ratio": FLAGS.max_len_ratio,
+                "min_score_ratio": FLAGS.min_score_ratio,
+                "n_questions": n_questions[dataset_id],
+                "n_ans_pairs": n_ans_pairs[dataset_id]
+            }
+            json.dump(metadata, meta_f, indent=2)

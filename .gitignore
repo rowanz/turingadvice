@@ -3,6 +3,7 @@
 *.tsv
 *.tfrecords
 params.json
+meta.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

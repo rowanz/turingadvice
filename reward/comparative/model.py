@@ -8,7 +8,10 @@ import tensorflow.compat.v1 as tf
 import mesh_tensorflow
 from mesh_tensorflow.transformer import utils
 
-from t5.data import get_mixture_or_task, DEFAULT_SPM_PATH
+from reward.comparative.data import get_dataset, get_checkpoint_paths
+from reward.comparative.mtf_extensions import\
+  make_reward_bitransformer, _tpu_estimator_model_fn
+from t5.data import get_mixture_or_task
 from t5.models.mtf_model import \
   MtfModel, _get_latest_checkpoint_from_dir, _operative_config_path
 from reward.comparative.data import \
@@ -66,8 +69,8 @@ class ComparativeRewardModel(MtfModel):
     estimator.train(input_fn=input_fn, max_steps=steps)
 
   def eval(
-    self, bucket_name, dataset_id, split="val",
-    min_checkpoint_steps=None
+    self, bucket_name, dataset_id, split="val", min_checkpoint_steps=None,
+    tokens_per_microbatch_per_replica=None
     ):
     """
     Evaluate model metrics on several checkpoints
@@ -79,6 +82,10 @@ class ComparativeRewardModel(MtfModel):
     # "I have no idea why but I think this must be needed?" - Rowan
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(self._model_dir))
+      gin.bind_parameter(
+        "serialize_num_microbatches.tokens_per_microbatch_per_replica",
+        tokens_per_microbatch_per_replica
+      )
     estimator = self.estimator(vocabulary, sequence_length=sequence_length)
     # 
     # Data input function for TPUEstimator
@@ -113,7 +120,7 @@ class ComparativeRewardModel(MtfModel):
 
   def finetune(
     self, bucket_name, dataset_id, finetune_steps, pretrained_model_dir,
-    tokens_per_microbatch_per_replica=None,
+    dropout_rate=0.1, tokens_per_microbatch_per_replica=None,
     pretrained_checkpoint_step=-1
     ):
     if pretrained_checkpoint_step == -1:
@@ -122,6 +129,7 @@ class ComparativeRewardModel(MtfModel):
       checkpoint_step = pretrained_checkpoint_step
     with gin.unlock_config():
       gin.parse_config_file(_operative_config_path(pretrained_model_dir))
+      gin.bind_parameter("%dropout_rate", dropout_rate)
       gin.bind_parameter(
         "serialize_num_microbatches.tokens_per_microbatch_per_replica",
         tokens_per_microbatch_per_replica

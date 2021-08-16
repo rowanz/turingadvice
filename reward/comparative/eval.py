@@ -49,15 +49,19 @@ flags.DEFINE_integer(
     default=8,
     help="Number of cores per model instance."
 )
+flags.DEFINE_integer(
+    name="batch_size",
+    default=1,
+    help="Batch size. Spillover samples are ignored"
+)
+flags.DEFINE_integer(
+    name="tokens_per_microbatch_per_replica",
+    default=1280 * 2,
+    help="How many tokens of input can each model replica handle?"
+)
 FLAGS = flags.FLAGS
 
 def main(_):
-    # Monkey-patch Mesh-Tensorflow model instantiation
-    mesh_tensorflow.transformer.transformer.make_bitransformer = \
-        make_reward_bitransformer
-    # Monkey-patch Mesh-Tensorflow TPUEstimator creation
-    mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
-        _tpu_estimator_model_fn
     # Initialize model
     model_dir = MODEL_DIR.format(
         bucket_name=FLAGS.bucket_name,
@@ -69,7 +73,7 @@ def main(_):
         tpu=os.uname()[1],
         tpu_topology='2x2', # Must be this for validation
         model_parallelism=FLAGS.model_parallelism,
-        batch_size=1, # To avoid dropping observations
+        batch_size=FLAGS.batch_size,
         sequence_length=SEQUENCE_LENGTH,
         iterations_per_loop=FLAGS.iterations_per_loop,
     )
@@ -77,7 +81,8 @@ def main(_):
         bucket_name=FLAGS.bucket_name,
         dataset_id=FLAGS.dataset_id,
         split=FLAGS.split,
-        min_checkpoint_steps=FLAGS.min_checkpoint_steps
+        min_checkpoint_steps=FLAGS.min_checkpoint_steps,
+        tokens_per_microbatch_per_replica=FLAGS.tokens_per_microbatch_per_replica
     )
 
 if __name__ == "__main__":
