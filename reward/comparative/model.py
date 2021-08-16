@@ -143,7 +143,7 @@ class ComparativeRewardModel(MtfModel):
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
     )
   
-  def predict_from_file(self, input_file, checkpoint_steps=-1):
+  def predict_from_file(self, input_path, output_path, checkpoint_steps=-1):
     """
     Args:
     input_file: str
@@ -157,14 +157,15 @@ class ComparativeRewardModel(MtfModel):
     estimator = self.estimator(vocabulary, sequence_length=SEQUENCE_LENGTH)
     def _input_fn(params):
       del params
-      dataset = get_prediction_dataset(input_file)
+      dataset = get_prediction_dataset(input_path)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
       return dataset
-    predictions = estimator.predict(
+    predictions_iter = estimator.predict(
       input_fn=_input_fn,
       checkpoint_path=f"{self._model_dir}/model.ckpt-{checkpoint_steps}"
     )
-    return predictions
+    for predictions in predictions_iter:
+      utils.write_lines_to_file(predictions, output_path)
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """
