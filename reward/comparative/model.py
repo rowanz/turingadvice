@@ -171,9 +171,9 @@ class ComparativeRewardModel(MtfModel):
       for predictions in predictions_iter:
         if isinstance(predictions, list):
           for prediction in predictions:
-            output_file.write(f"{prediction}\n")
+            output_file.write(str(prediction["outputs"]) + "\n")
         else:
-          output_file.write(f"{predictions}\n")
+          output_file.write(str(predictions["outputs"]) + "\n")
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """
