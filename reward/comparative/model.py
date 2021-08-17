@@ -1,4 +1,5 @@
 import os
+from reward.comparative.data.ops import SEQUENCE_LENGTH
 from tqdm import tqdm
 from copy import deepcopy
 
@@ -13,6 +14,10 @@ from reward.comparative.mtf_extensions import\
 from t5.data import get_mixture_or_task
 from t5.models.mtf_model import \
   MtfModel, _get_latest_checkpoint_from_dir, _operative_config_path
+from reward.comparative.data import \
+  get_dataset, get_prediction_dataset, get_checkpoint_paths
+from reward.comparative.mtf_extensions import \
+  make_reward_bitransformer, _tpu_estimator_model_fn, _predict_reward_fn
 
 REDDIT_TASK_NAME = "reddit_v002"
 
@@ -25,6 +30,7 @@ class ComparativeRewardModel(MtfModel):
     mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
         _tpu_estimator_model_fn
     super(ComparativeRewardModel, self).__init__(*args, **kwargs)
+    self._predict_fn = _predict_reward_fn
 
   def train(self, bucket_name, dataset_id, steps, init_checkpoint=None):
     """
@@ -137,6 +143,37 @@ class ComparativeRewardModel(MtfModel):
       steps=checkpoint_step + finetune_steps,
       init_checkpoint=os.path.join(pretrained_model_dir, model_ckpt)
     )
+  
+  def predict_from_file(self, input_path, output_path, checkpoint_steps=-1):
+    """
+    Args:
+    input_file: str
+      Path to a tab-separated text file with columns [inputs, targets]
+    """
+    if checkpoint_steps == -1:
+      checkpoint_steps = _get_latest_checkpoint_from_dir(self._model_dir)
+    with gin.unlock_config():
+      gin.parse_config_file(_operative_config_path(self._model_dir))
+    vocabulary = get_mixture_or_task(REDDIT_TASK_NAME).get_vocabulary()
+    estimator = self.estimator(vocabulary, sequence_length=SEQUENCE_LENGTH)
+    def _input_fn(params):
+      del params
+      dataset = get_prediction_dataset(input_path, batch_size=self.batch_size)
+      dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
+      return dataset
+    predictions_iter = estimator.predict(
+      input_fn=_input_fn,
+      checkpoint_path=f"{self._model_dir}/model.ckpt-{checkpoint_steps}"
+    )
+    if tf.io.gfile.exists(output_path):
+      tf.io.gfile.remove(output_path)
+    with tf.io.gfile.GFile(output_path, "w") as output_file:
+      for predictions in predictions_iter:
+        if isinstance(predictions, list):
+          for prediction in predictions:
+            output_file.write(str(prediction["outputs"]) + "\n")
+        else:
+          output_file.write(str(predictions["outputs"]) + "\n")
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """

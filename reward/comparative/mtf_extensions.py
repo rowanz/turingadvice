@@ -223,6 +223,25 @@ def make_reward_bitransformer(
     )
     return Bitransformer(encoder, decoder)
 
+def _predict_reward_fn(model, features, variable_dtype):
+  position_kwargs = dict(
+      encoder_sequence_id=features.get("inputs_segmentation", None),
+      decoder_sequence_id=features.get("targets_segmentation",
+                                            None),
+      decoder_subsequence_id=features.get("targets_subsegmentation",
+                                              None),
+      encoder_position=features.get("inputs_position", None),
+      decoder_position=features.get("targets_position", None),
+  )
+  return model.call_simple(
+    inputs=features["inputs"],
+    targets=features["targets"],
+    compute_loss=False,
+    mode=tf.estimator.ModeKeys.PREDICT,
+    variable_dtype=variable_dtype,
+    **position_kwargs
+  )[0]
+
 import re
 import six
 from tensorflow.python.ops import resources
@@ -247,7 +266,7 @@ def _tpu_estimator_model_fn(model_type,
                            optimizer=None,
                            outer_batch_size=1,
                            tpu_summaries=False,
-                           predict_fn=None,
+                           predict_fn=_predict_reward_fn,
                            variable_filter=None,
                            init_checkpoint=None,
                            ensemble_inputs=None):
@@ -356,6 +375,7 @@ def _tpu_estimator_model_fn(model_type,
       lowering = mtf.Lowering(graph, {mesh: mesh_impl}, autostack=autostack)
       inputs = lowering.export_to_tf_tensor(inputs)
       outputs = lowering.export_to_tf_tensor(mtf_samples)
+      tf.logging.info(f"inputs: {inputs}\noutputs: {outputs}")
       predictions = {
           "inputs": inputs,
           "outputs": outputs}
