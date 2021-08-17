@@ -158,18 +158,22 @@ class ComparativeRewardModel(MtfModel):
     estimator = self.estimator(vocabulary, sequence_length=SEQUENCE_LENGTH)
     def _input_fn(params):
       del params
-      dataset = get_prediction_dataset(input_path)
-      dataset = dataset.batch(self.batch_size, drop_remainder=True)
+      dataset = get_prediction_dataset(input_path, batch_size=self.batch_size)
       dataset = dataset.prefetch(tf.data.experimental.AUTOTUNE)
       return dataset
     predictions_iter = estimator.predict(
       input_fn=_input_fn,
       checkpoint_path=f"{self._model_dir}/model.ckpt-{checkpoint_steps}"
     )
-    all_predictions = []
-    for predictions in predictions_iter:
-        all_predictions.append(predictions["outputs"])
-    utils.write_lines_to_file(all_predictions, output_path)
+    if tf.io.gfile.exists(output_path):
+      tf.io.gfile.remove(output_path)
+    with tf.io.gfile.GFile(output_path, "w") as output_file:
+      for predictions in predictions_iter:
+        if isinstance(predictions, list):
+          for prediction in predictions:
+            output_file.write(f"{prediction}\n")
+        else:
+          output_file.write(f"{predictions}\n")
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """

@@ -145,7 +145,7 @@ def get_dataset(
     else:
         return unshuffled_dataset
 
-def get_prediction_dataset(tsv_path):
+def get_prediction_dataset(tsv_path, batch_size=1):
     tsv_dataset = tf.data.experimental.CsvDataset(
         tsv_path,
         record_defaults=["" for _ in PREDICTION_TSV_COLNAMES],
@@ -171,7 +171,14 @@ def get_prediction_dataset(tsv_path):
         dataset=unpadded_dataset,
         length=_sequence_length
     )
-    return padded_dataset
+    batched_dataset = padded_dataset.batch(batch_size, drop_remainder=False)
+    batched_dataset = batched_dataset.map(
+        lambda d: {
+            k: tf.pad(v, paddings=[[0, batch_size - tf.shape(v)[0]], [0, 0]])
+            for k, v in d.items()
+        }
+    )
+    return batched_dataset
 
 def _add_position_and_segmentation(sample):
     """
