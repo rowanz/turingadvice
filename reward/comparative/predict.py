@@ -105,7 +105,7 @@ def main(_):
                     score_count += 1
         mean_output_path = _get_mean_output_path(FLAGS.output_path)
         with tf.io.gfile.GFile(mean_output_path, "w") as mean_output_file:
-            mean_output_file.write(score_sum / score_count)
+            mean_output_file.write(str(score_sum / score_count))
 
 if __name__ == "__main__":
     tf.app.run()
