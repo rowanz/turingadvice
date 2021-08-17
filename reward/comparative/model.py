@@ -17,7 +17,7 @@ from t5.models.mtf_model import \
 from reward.comparative.data import \
   get_dataset, get_prediction_dataset, get_checkpoint_paths
 from reward.comparative.mtf_extensions import \
-  make_reward_bitransformer, _tpu_estimator_model_fn
+  make_reward_bitransformer, _tpu_estimator_model_fn, _predict_reward_fn
 
 REDDIT_TASK_NAME = "reddit_v002"
 
@@ -30,6 +30,7 @@ class ComparativeRewardModel(MtfModel):
     mesh_tensorflow.transformer.utils.tpu_estimator_model_fn = \
         _tpu_estimator_model_fn
     super(ComparativeRewardModel, self).__init__(*args, **kwargs)
+    self._predict_fn = _predict_reward_fn
 
   def train(self, bucket_name, dataset_id, steps, init_checkpoint=None):
     """
@@ -165,8 +166,10 @@ class ComparativeRewardModel(MtfModel):
       input_fn=_input_fn,
       checkpoint_path=f"{self._model_dir}/model.ckpt-{checkpoint_steps}"
     )
+    all_predictions = []
     for predictions in predictions_iter:
-      utils.write_lines_to_file(predictions, output_path)
+        all_predictions.append(predictions["outputs"])
+    utils.write_lines_to_file(all_predictions, output_path)
 
   def estimator(self, vocabulary, init_checkpoint=None, sequence_length=None):
     """

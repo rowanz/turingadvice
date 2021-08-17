@@ -240,7 +240,7 @@ def _predict_reward_fn(model, features, variable_dtype):
     mode=tf.estimator.ModeKeys.PREDICT,
     variable_dtype=variable_dtype,
     **position_kwargs
-  )
+  )[0]
 
 import re
 import six
@@ -375,6 +375,7 @@ def _tpu_estimator_model_fn(model_type,
       lowering = mtf.Lowering(graph, {mesh: mesh_impl}, autostack=autostack)
       inputs = lowering.export_to_tf_tensor(inputs)
       outputs = lowering.export_to_tf_tensor(mtf_samples)
+      tf.logging.info(f"inputs: {inputs}\noutputs: {outputs}")
       predictions = {
           "inputs": inputs,
           "outputs": outputs}
