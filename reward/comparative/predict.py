@@ -95,7 +95,6 @@ def main(_):
         checkpoint_steps=FLAGS.checkpoint_steps
     )
     if FLAGS.compute_mean:
-        mean_output_path = _get_mean_output_path(FLAGS.output_file)
         score_sum = 0
         score_count = 0
         with tf.io.gfile.GFile(FLAGS.output_path, "r") as output_file:
@@ -104,6 +103,7 @@ def main(_):
                 if line_value != 0:
                     score_sum += line_value
                     score_count += 1
+        mean_output_path = _get_mean_output_path(FLAGS.output_path)
         with tf.io.gfile.GFile(mean_output_path, "w") as mean_output_file:
             mean_output_file.write(score_sum / score_count)
 
