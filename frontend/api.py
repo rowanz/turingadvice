@@ -31,17 +31,25 @@ app = flask.Flask(__name__, template_folder=TEMPLATE_DIR)
 CORS(app, resources={r'/api/*': {'origins': '*'}})
 logger = logging.getLogger(__name__)
 
+def _datetime_to_str(date):
+    return [
+        'January', 'February', 'March', 'April', 'May', 'June', 'July',
+        'August', 'September', 'October', 'November', 'December'
+        ][date.month - 1] + ' {}, {}'.format(date.day, date.year)
+
 @app.route('/api/askbatch', methods=['POST'])
 def api_askbatch():
     request_dict = dict(flask.request.json)
     instances = request_dict["instances"]
+    date = datetime.utcnow()
+    date_str = _datetime_to_str(date)
     for instance in instances:
-        instance["date"] = datetime.utcnow()
+        instance["date"] = date_str
     advices = BoN_generator.predict_from_instances(instances)
     request_dict.update({"advices": advices})
     with open("./frontend/log.jsonl", "a+") as logfile:
         logfile.write(json.dumps(request_dict) + "\n")
-    return flask.jsonify({"gens": advices,}), 200
+    return flask.jsonify({"gens": advices}), 200
 
 @click.command()
 def serve():
