@@ -7,7 +7,7 @@ class BestOfNGenerator():
         self.N = N
         self.sampling_keep_top_p = sampling_keep_top_p
     
-    def predict_from_instances(instances):
+    def predict_from_instances(self, instances):
         """
         Args:
         instances: [dict]
