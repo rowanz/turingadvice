@@ -55,11 +55,21 @@ Or, to create your own dataset, visit the [data/](data/) folder and use my BigQu
 # Bibtex
 
 ```
-@article{zellers2020turingadvice,
-    title={Evaluating Machines by their Real-World Language Use},
-    author={Rowan Zellers and Ari Holtzman and Elizabeth Clark and Lianhui Qin and Ali Farhadi and Yejin Choi},
-    journal={arXiv preprint},
-    year={2020}
+@inproceedings{zellers-etal-2021-turingadvice,
+    title = "{T}uring{A}dvice: A Generative and Dynamic Evaluation of Language Use",
+    author = "Zellers, Rowan  and
+      Holtzman, Ari  and
+      Clark, Elizabeth  and
+      Qin, Lianhui  and
+      Farhadi, Ali  and
+      Choi, Yejin",
+    booktitle = "Proceedings of the 2021 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies",
+    month = jun,
+    year = "2021",
+    address = "Online",
+    publisher = "Association for Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/2021.naacl-main.386",
+    pages = "4856--4880",
 }
 ```
 
@@ -70,7 +80,7 @@ Submitting to our leaderboard is easy! All you'll need to do is set up a **web A
 ## Setting up the Web API
 Examples of the format required are in [grover/server/run_server.py](grover/server/run_server.py), [t5/run_server.py](t5/run_server.py), and [tfidf/run_server.py](tfidf/run_server.py). If you run one of those scripts, then there will be a web API running on `localhost:5000/api/askbatch`. Probably the easiest thing to do is to customize one of those scripts for your model.
 
-During evaluation, I'll send your web API 200 situations, and it'll need to generate advice for each one. It'll be a json with a key called `instances`. Its value is a list of situations. Each has `title`, `selftext`, and `subreddit` fields:
+During evaluation, I'll send your web API 200 situations (all at the same time in "batched" form), and it'll need to generate advice for each one. It'll be a json with a key called `instances`. Its value is a list of situations. Each has `title`, `selftext`, and `subreddit` fields:
 
 ```
 {"instances": [
@@ -89,7 +99,9 @@ The format is exactly the same as what's in those files. You can debug it using 
 curl -X POST -d '{"instances": [{"title": "I am trying to debug this code and its really hard.", "selftext": "test test", "subreddit": "Advice"},{"title": "I am trying to debug this code and its really hard.  airestn eairestn iarst iearnst ", "selftext": "test test", "subreddit": "Advice"}]}' -H "Content-Type: application/json" localhost:5000/api/askbatch
 ```
 
-Let me know if you encounter trouble with making a web demo, and we'll figure out a solution!
+My script is able to handle a variety of model sizes, including GPT3 and [T5-11B](t5/run_server.py), which generates all 200 predictions in around 10 minutes. Unfortunately, I can't guarantee that I can score your model if it takes significantly longer to generate all 200 predictions, due in part to POST requests timing out.
+
+Get in touch if you encounter trouble with making a web demo and I'd be happy to give suggestions :)
 
 ## Making the submission
 Please email me (rowanz at cs.washington.edu)  with a public-facing URL to your web API, and I can get the evaluation started. Though in the paper, we suggest having leaderboard submitters pay the mechanical turk fee, we're happy to make an exception for for the first couple of teams while we iron out the details :)
