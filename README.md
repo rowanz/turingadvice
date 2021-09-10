@@ -1,6 +1,6 @@
 # TuringAdvice
 
-(aka, code for [Evaluating Machines by their Real-World Language Use](https://arxiv.org/abs/2004.03607).)
+(aka, code for [TuringAdvice: A Generative and Dynamic Evaluation of Language Use](https://arxiv.org/abs/2004.03607).)
 
 TuringAdvice is a challenge for AI systems, to test their understanding of natural language. The key idea is that must _generate_ advice in response to someone who is seeking it. To pass the challenge, the machine's advice must be at least as helpful as human-written advice for that situation.
 
