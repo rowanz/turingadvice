@@ -22,4 +22,4 @@ google-cloud-storage==1.23.0
 oauth2client
 requests==2.21.0
 git+https://github.com/rowanz/mesh.git#egg=mesh-tensorflow
-mistune==0.8.4
+mistune==2.0.3
