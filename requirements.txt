@@ -20,6 +20,6 @@ google-api-python-client
 google-compute-engine
 google-cloud-storage==1.23.0
 oauth2client
-requests==2.21.0
+requests==2.31.0
 git+https://github.com/rowanz/mesh.git#egg=mesh-tensorflow
 mistune==0.8.4
